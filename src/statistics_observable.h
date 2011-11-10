@@ -14,6 +14,7 @@ typedef struct {
   void* args;
   int n;
   int (*fun)  ( void* A_args, double* A, unsigned int dim_A);
+  char *fun_name;
   double* last_value;
   int last_update;
 } observable;
@@ -70,8 +71,23 @@ typedef struct {
   IntList *ids2;
 } iw_params;
 
+/** Same as particle positions, but set the condition if there is an interaction partner from the 2nd list within the given cutoff radius
+
+  The observable consists of two sub-units:
+  double condition;
+  double position[3]; 
+  
+  If no partner is found within cutoff, set it to -1.  
+  Increment the condition when changing from some interaction (before) 
+  to some interaction (now).  
+  
+  For passing parameters and conditions it uses the same data structure as the nearest_neighbour_conditional, but the chain length is unused 
+*/
+int observable_particle_positions_conditional(void* params, double* A, unsigned int n_A);
+
 /** For each particle from ids1 get the nearest interaction partner out of 
-  those among ids2; 
+  those among ids2 and set the condition upon loss/gain of a partner 
+
   If no partner is found within cutoff, set it to -1. 
   Increment the condition when changing from some interaction (before) 
   to some interaction (now).
@@ -80,7 +96,9 @@ typedef struct {
 int observable_nearest_neighbour_conditional(void* params, double* A, unsigned int n_A);
 typedef struct {
   double cutoff;
-  // maximum difference between ids whic makes physical sense
+  double cutoff2;
+  int round;
+  // maximum difference between ids which makes physical sense
   int chain_length; 
   IntList *ids1;
   IntList *ids2;

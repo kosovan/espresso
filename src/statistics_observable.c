@@ -35,6 +35,24 @@ int tclcommand_observable_print(Tcl_Interp* interp, int argc, char** argv, int* 
   return TCL_OK;
 }
 
+int tclcommand_observable_print_parameters(Tcl_Interp* interp, int argc, char** argv, int* change, observable* obs) {
+  char buffer[TCL_DOUBLE_SPACE + TCL_INTEGER_SPACE + 3];
+  double* values=malloc(obs->n*sizeof(double));
+  if (argc==0) {
+    sprintf(buffer," %d ",obs->n);
+    Tcl_AppendResult(interp, obs->fun_name, buffer, (char *)NULL );
+    for (int i = 0; i<obs->n - 1; i++) {
+      Tcl_PrintDouble(interp, values[i], buffer);
+      Tcl_AppendResult(interp, buffer, " ", (char *)NULL );
+    }
+  } else { 
+    Tcl_AppendResult(interp, "Unknown argument to observable print_parameters: ", argv[0], "\n", (char *)NULL );
+    return TCL_ERROR;
+  }
+  free(values);
+  return TCL_OK;
+}
+
 int tclcommand_observable_print_formatted(Tcl_Interp* interp, int argc, char** argv, int* change, observable* obs, double* values) {
   if (0) {
 #ifdef LB
@@ -195,6 +213,7 @@ int tclcommand_observable_particle_velocities(Tcl_Interp* interp, int argc, char
   if (parse_id_list(interp, argc-1, argv+1, &temp, &ids) != TCL_OK ) 
     return TCL_ERROR;
   obs->fun=&observable_particle_velocities;
+  obs->fun_name=strdup("particle_velocities");
   obs->args=ids;
   obs->n=3*ids->n;
   *change=1+temp;
@@ -214,6 +233,7 @@ int tclcommand_observable_com_velocity(Tcl_Interp* interp, int argc, char** argv
   if (argc>0 && ARG0_IS_S("blocked")) {
     if (argc >= 2 && ARG1_IS_I(blocksize) && (ids->n % blocksize ==0 )) {
       obs->fun=&observable_blocked_com_velocity;
+      obs->fun_name=strdup("blocked_com_velocity");
       obs->args=ids;
       obs->n=3*ids->n/blocksize;
       *change=3+temp;
@@ -225,6 +245,7 @@ int tclcommand_observable_com_velocity(Tcl_Interp* interp, int argc, char** argv
     }
   } else /* if nonblocked com is to be taken */ {
     obs->fun=&observable_com_velocity;
+    obs->fun_name=strdup("com_velocity");
     obs->args=ids;
     obs->n=3;
     *change=1+temp;
@@ -245,6 +266,7 @@ int tclcommand_observable_com_position(Tcl_Interp* interp, int argc, char** argv
   if (argc>0 && ARG0_IS_S("blocked")) {
     if (argc >= 2 && ARG1_IS_I(blocksize) && (ids->n % blocksize ==0 )) {
       obs->fun=&observable_blocked_com_position;
+      obs->fun_name=strdup("blocked_com_position");
       obs->args=ids;
       obs->n=3*ids->n/blocksize;
       *change=3+temp;
@@ -256,6 +278,7 @@ int tclcommand_observable_com_position(Tcl_Interp* interp, int argc, char** argv
     }
   } else /* if nonblocked com is to be taken */ {
     obs->fun=&observable_com_position;
+    obs->fun_name=strdup("com_position");
     obs->args=ids;
     obs->n=3;
     *change=1+temp;
@@ -269,6 +292,7 @@ int tclcommand_observable_particle_positions(Tcl_Interp* interp, int argc, char*
   if (parse_id_list(interp, argc-1, argv+1, &temp, &ids) != TCL_OK ) 
      return TCL_ERROR;
   obs->fun = &observable_particle_positions;
+  obs->fun_name=strdup("particle_positions");
   obs->args=(void*)ids;
   obs->n=3*ids->n;
   *change=1+temp;
@@ -278,6 +302,7 @@ int tclcommand_observable_particle_positions(Tcl_Interp* interp, int argc, char*
 
 int tclcommand_observable_stress_tensor(Tcl_Interp* interp, int argc, char** argv, int* change, observable* obs) {
   obs->fun = &observable_stress_tensor;
+  obs->fun_name=strdup("stress_tensor");
   obs->args=(void*)NULL;
   obs->n=9;
   *change=1;
@@ -287,6 +312,7 @@ int tclcommand_observable_stress_tensor(Tcl_Interp* interp, int argc, char** arg
 
 int tclcommand_observable_stress_tensor_acf_obs(Tcl_Interp* interp, int argc, char** argv, int* change, observable* obs) {
   obs->fun = &observable_stress_tensor_acf_obs;
+  obs->fun_name=strdup("stress_tensor_acf_obs");
   obs->args=(void*)NULL;
   obs->n=6;
   *change=1;
@@ -298,6 +324,7 @@ int tclcommand_observable_density_profile(Tcl_Interp* interp, int argc, char** a
   int temp;
   profile_data* pdata;
   obs->fun = &observable_density_profile;
+  obs->fun_name=strdup("density_profile");
   if (! tclcommand_parse_profile(interp, argc-1, argv+1, &temp, &obs->n, &pdata) == TCL_OK ) 
     return TCL_ERROR;
   if (pdata->id_list==0) {
@@ -317,6 +344,7 @@ int tclcommand_observable_lb_velocity_profile(Tcl_Interp* interp, int argc, char
 #else
   profile_data* pdata;
   obs->fun = &observable_lb_velocity_profile;
+  obs->fun_name=strdup("lb_velocity_profile");
   if (! tclcommand_parse_profile(interp, argc-1, argv+1, &temp, &obs->n, &pdata) == TCL_OK ) 
     return TCL_ERROR;
   obs->args=(void*)pdata;
@@ -331,6 +359,7 @@ int tclcommand_observable_radial_density_profile(Tcl_Interp* interp, int argc, c
   int temp;
   radial_profile_data* rpdata;
   obs->fun = &observable_radial_density_profile;
+  obs->fun_name=strdup("radial_dnesity_profile");
   if (! tclcommand_parse_radial_profile(interp, argc-1, argv+1, &temp, &obs->n, &rpdata) == TCL_OK ) 
      return TCL_ERROR;
   if (rpdata->id_list==0) {
@@ -347,6 +376,7 @@ int tclcommand_observable_radial_flux_density_profile(Tcl_Interp* interp, int ar
   int temp;
   radial_profile_data* rpdata;
   obs->fun = &observable_radial_flux_density_profile;
+  obs->fun_name=strdup("radial_flux_dnesity_profile");
   if (! tclcommand_parse_radial_profile(interp, argc-1, argv+1, &temp, &obs->n, &rpdata) == TCL_OK ) 
      return TCL_ERROR;
   if (rpdata->id_list==0) {
@@ -363,6 +393,7 @@ int tclcommand_observable_flux_density_profile(Tcl_Interp* interp, int argc, cha
   int temp;
   profile_data* pdata;
   obs->fun = &observable_flux_density_profile;
+  obs->fun_name=strdup("flux_dnesity_profile");
   if (! tclcommand_parse_profile(interp, argc-1, argv+1, &temp, &obs->n, &pdata) == TCL_OK ) 
      return TCL_ERROR;
   if (pdata->id_list==0) {
@@ -383,6 +414,7 @@ int tclcommand_observable_lb_radial_velocity_profile(Tcl_Interp* interp, int arg
 
   radial_profile_data* rpdata;
   obs->fun = &observable_lb_radial_velocity_profile;
+  obs->fun_name=strdup("lb_radial_velocity_profile");
   if (! tclcommand_parse_radial_profile(interp, argc-1, argv+1, &temp, &obs->n, &rpdata) == TCL_OK ) 
      return TCL_ERROR;
   obs->args=(void*)rpdata;
@@ -397,6 +429,7 @@ int tclcommand_observable_particle_currents(Tcl_Interp* interp, int argc, char**
   int temp;
   IntList* ids;
   obs->fun = &observable_particle_currents;
+  obs->fun_name=strdup("particle_currents");
   if (! parse_id_list(interp, argc-1, argv+1, &temp, &ids) == TCL_OK ) 
     return TCL_ERROR;
   obs->args=(void*)ids;
@@ -415,6 +448,7 @@ int tclcommand_observable_currents(Tcl_Interp* interp, int argc, char** argv, in
   int temp;
   IntList* ids;
   obs->fun = &observable_currents;
+  obs->fun_name=strdup("currents");
   if (! parse_id_list(interp, argc-1, argv+1, &temp, &ids) == TCL_OK ) 
     return TCL_ERROR;
   obs->args=(void*)ids;
@@ -432,6 +466,7 @@ int tclcommand_observable_dipole_moment(Tcl_Interp* interp, int argc, char** arg
   int temp;
   IntList* ids;
   obs->fun = &observable_dipole_moment;
+  obs->fun_name=strdup("dipole_moment");
   if (! parse_id_list(interp, argc-1, argv+1, &temp, &ids) == TCL_OK ) 
     return TCL_ERROR;
   obs->args=(void*)ids;
@@ -452,6 +487,7 @@ int tclcommand_observable_structure_factor(Tcl_Interp* interp, int argc, char** 
   return TCL_ERROR;
   if (argc > 1 && ARG1_IS_I(order)) {
     obs->fun = &observable_structure_factor;
+    obs->fun_name=strdup("structure_factor");
     order_p=malloc(sizeof(int));
     *order_p=order;
     obs->args=(void*) order_p;
@@ -480,6 +516,7 @@ int tclcommand_observable_interacts_with(Tcl_Interp* interp, int argc, char** ar
   int temp;
   double cutoff;
   obs->fun = &observable_interacts_with;
+  obs->fun_name=strdup("interacts_with");
   ids1=(IntList*)malloc(sizeof(IntList));
   ids2=(IntList*)malloc(sizeof(IntList));
   iw_params* iw_params_p=(iw_params*) malloc(sizeof(iw_params));
@@ -522,6 +559,7 @@ int tclcommand_observable_nearest_neighbour_conditional(Tcl_Interp* interp, int 
   double cutoff;
   int chain_length;
   obs->fun = &observable_nearest_neighbour_conditional;
+  obs->fun_name=strdup("nearest_neighbour_conditional");
   nn_cond_params* nn_cond_params_p=(nn_cond_params*) malloc(sizeof(nn_cond_params));
   ids1=(IntList*)malloc(sizeof(IntList));
   ids2=(IntList*)malloc(sizeof(IntList));
@@ -551,6 +589,7 @@ int tclcommand_observable_nearest_neighbour_conditional(Tcl_Interp* interp, int 
   }
   *change+=1;
   nn_cond_params_p->cutoff=cutoff;
+  nn_cond_params_p->cutoff2=cutoff*cutoff;
   if ( argc < 7 || !ARG_IS_I(6,chain_length)) {
     Tcl_AppendResult(interp, usage_msg, (char *)NULL);
     free(ids1);
@@ -569,7 +608,7 @@ int tclcommand_observable_nearest_neighbour_conditional(Tcl_Interp* interp, int 
   alloc_intlist(nn_cond_params_p->prev_partners,ids1->n);
   for (i=0; i< ids1->n; i++) {
     nn_cond_params_p->prev_partners->e[i]=-1;
-    nn_cond_params_p->conditions->e[i]=0;
+    nn_cond_params_p->conditions->e[i]=-1;
   }
   nn_cond_params_p->prev_partners->n=i;
   nn_cond_params_p->prev_partners->n=i;
@@ -577,6 +616,64 @@ int tclcommand_observable_nearest_neighbour_conditional(Tcl_Interp* interp, int 
   nn_cond_params_p->chain_length=chain_length;
   obs->args=(void*)nn_cond_params_p;
   obs->n=1+2*(ids1->n); // number of ids from the 1st argument
+  return TCL_OK;
+}
+
+int tclcommand_observable_particle_positions_conditional(Tcl_Interp* interp, int argc, char** argv, int* change, observable* obs) {
+  IntList *ids1, *ids2, *partners, *conditions;
+  char usage_msg[]="Usage: analyze correlation ... particle_positions_conditional id_list1 id_list2 cutoff";
+  int temp, i;
+  double cutoff;
+  obs->fun = &observable_particle_positions_conditional;
+  obs->fun_name=strdup("particle_positions_conditional");
+  nn_cond_params* nn_cond_params_p=(nn_cond_params*) malloc(sizeof(nn_cond_params));
+  ids1=(IntList*)malloc(sizeof(IntList));
+  ids2=(IntList*)malloc(sizeof(IntList));
+  if (! parse_id_list(interp, argc-1, argv+1, &temp, &ids1) == TCL_OK ) {
+    free(ids1);
+    free(ids2);
+    free(nn_cond_params_p);
+    return TCL_ERROR;
+  }
+  //printf("n: %d\n", ids1->n); fflush(stdout); //exit(1);
+  nn_cond_params_p=(nn_cond_params*)malloc(sizeof(nn_cond_params));
+  nn_cond_params_p->ids1=ids1;
+  *change=1+temp;
+  if (! parse_id_list(interp, argc-3, argv+3, &temp, &ids2) == TCL_OK ) {
+    free(ids1);
+    free(ids2);
+    free(nn_cond_params_p);
+    return TCL_ERROR;
+  }
+  *change+=temp;
+  nn_cond_params_p->ids2=ids2;
+  if ( argc < 6 || !ARG_IS_D(5,cutoff)) {
+    Tcl_AppendResult(interp, usage_msg, (char *)NULL);
+    free(ids1);
+    free(ids2);
+    free(nn_cond_params_p);
+  return TCL_ERROR;
+  }
+  *change+=1;
+  nn_cond_params_p->cutoff=cutoff;
+  nn_cond_params_p->cutoff2=cutoff*cutoff;
+  // allocate space for condition arguments
+  nn_cond_params_p->conditions=(IntList*)malloc(sizeof(IntList));
+  init_intlist(nn_cond_params_p->conditions); 
+  alloc_intlist(nn_cond_params_p->conditions,ids1->n); 
+  
+  nn_cond_params_p->prev_partners=(IntList*)malloc(sizeof(IntList));
+  init_intlist(nn_cond_params_p->prev_partners); 
+  alloc_intlist(nn_cond_params_p->prev_partners,ids1->n);
+  for (i=0; i< ids1->n; i++) {
+    nn_cond_params_p->prev_partners->e[i]=-1;
+    nn_cond_params_p->conditions->e[i]=-1;
+  }
+  nn_cond_params_p->prev_partners->n=i;
+  nn_cond_params_p->prev_partners->n=i;
+  
+  obs->args=(void*)nn_cond_params_p;
+  obs->n=4*(ids1->n); // 1 condition + 3 dimensions per ID
   return TCL_OK;
 }
 
@@ -631,15 +728,14 @@ int tclcommand_observable_nearest_neighbour_conditional(Tcl_Interp* interp, int 
 
 
 
-
 #define REGISTER_OBSERVABLE(name,parser,id) \
   if (ARG_IS_S(2,#name)) { \
     observables[id]=malloc(sizeof(observable)); \
-    if (parser(interp, argc-2, argv+2, &temp, observables[n_observables]) ==TCL_OK) { \
+    if (parser(interp, argc-2, argv+2, &temp, observables[n_observables]) == TCL_OK) { \
       n_observables++; \
       argc-=1+temp; \
       argv+=1+temp; \
-      sprintf(buffer,"%d",no); \
+      sprintf(buffer,"%d",id); \
       Tcl_AppendResult(interp,buffer,(char *)NULL);\
       return TCL_OK; \
     } else { \
@@ -677,8 +773,10 @@ int tclcommand_observable(ClientData data, Tcl_Interp *interp, int argc, char **
   if (argc > 2 && ARG1_IS_S("new") ) {
 
     // find the next free observable id
-    for (id=0;id<n_observables;id++) 
-      if ( observables+id == 0 ) break; 
+    for (id=0;id<n_observables;id++) {
+      if ( observables+id == 0 ) 
+	break;
+    }
     if (id==n_observables) 
       observables=(observable**) realloc(observables, (n_observables+1)*sizeof(observable*)); 
 
@@ -694,6 +792,7 @@ int tclcommand_observable(ClientData data, Tcl_Interp *interp, int argc, char **
     REGISTER_OBSERVABLE(structure_factor, tclcommand_observable_structure_factor,id);
     REGISTER_OBSERVABLE(interacts_with, tclcommand_observable_interacts_with,id);
     REGISTER_OBSERVABLE(nearest_neighbour_conditional, tclcommand_observable_nearest_neighbour_conditional,id);
+   REGISTER_OBSERVABLE(particle_positions_conditional, tclcommand_observable_particle_positions_conditional,id);
   //  REGISTER_OBSERVABLE(obs_nothing, tclcommand_observable_obs_nothing,id);
   //  REGISTER_OBSERVABLE(flux_profile, tclcommand_observable_flux_profile,id);
     REGISTER_OBSERVABLE(density_profile, tclcommand_observable_density_profile,id);
@@ -715,6 +814,9 @@ int tclcommand_observable(ClientData data, Tcl_Interp *interp, int argc, char **
     }
     if (argc > 2 && ARG_IS_S(2,"print")) {
       return tclcommand_observable_print(interp, argc-3, argv+3, &temp, observables[n]);
+    }
+    if (argc > 2 && ARG_IS_S(2,"print_parameters")) {
+      return tclcommand_observable_print_parameters(interp, argc-3, argv+3, &temp, observables[n]);
     }
   }
   Tcl_AppendResult(interp, "Unknown observable ", argv[1] ,"\n", (char *)NULL);
@@ -1335,6 +1437,68 @@ int observable_particle_positions(void* idlist, double* A, unsigned int n_A) {
   return 0;
 }
 
+
+int observable_particle_positions_conditional(void* params_p, double* A, unsigned int n_A) {
+  nn_cond_params* params = (nn_cond_params*)params_p;
+  unsigned int i, j;
+  double pos1[3]; // position of the traced particle
+  double pos2[3]; // position of the possible interaction partner
+  double dist[3]; // minimum image vector between pos1 and pos2
+  double dist2, dx, dy, dz; // position of the possible interaction partner
+  double cut2 = params->cutoff2;
+  int partner = -1; // by default ther is no partner
+  IntList* ids1=params->ids1;
+  IntList* ids2=params->ids1;
+  sortPartCfg();
+  for ( i = 0; i<ids1->n; i++ ) {
+    // This checking should not be necessary if all functions are implemented properly
+    if (ids1->e[i] >= n_total_particles)
+      return 1; 
+    pos1[0] = partCfg[ids1->e[i]].r.p[0]; 
+    pos1[1] = partCfg[ids1->e[i]].r.p[1]; 
+    pos1[2] = partCfg[ids1->e[i]].r.p[2];
+    // first check for the last known partner
+    if ( params->prev_partners->e[i] != -1) {
+      j = params->prev_partners->e[i];
+      pos2[0] = partCfg[j].r.p[0]; 
+      pos2[1] = partCfg[j].r.p[1]; 
+      pos2[2] = partCfg[j].r.p[2]; 
+      get_mi_vector(dist,pos1,pos2);
+      dist2= dist[0]*dist[0] + dist[1]*dist[1] + dist[2]*dist[2];
+      // FIXME setting the partners still missing
+      if (dist2 < cut2) { 
+	partner=ids2->e[j];
+      }
+    }
+    // if not, then check all other candidates
+    for ( j = 0; (i<ids2->n) && (partner == -1); i++ ) {
+      pos2[0] = partCfg[ids2->e[i]].r.p[0]; 
+      pos2[1] = partCfg[ids2->e[i]].r.p[1]; 
+      pos2[2] = partCfg[ids2->e[i]].r.p[2];
+      get_mi_vector(dist,pos1,pos2);
+      dist2= dist[0]*dist[0] + dist[1]*dist[1] + dist[2]*dist[2];
+      // FIXME setting the partners still missing
+      if (dist2 < cut2) { 
+	partner=ids2->e[j];
+      }
+    }
+    // check for a detachment event 
+    if ( partner == -1 && params->prev_partners->e[i] != -1) {
+      params->conditions->e[i] *= -1;
+      params->conditions->e[i] += 1;
+    }
+    if ( partner > -1 && params->prev_partners->e[i] == -1) {
+      params->conditions->e[i] *= -1;
+    }
+    A[4*i]=params->conditions->e[i];
+    A[4*i+1]=pos1[0];
+    A[4*i+2]=pos1[1];
+    A[4*i+3]=pos1[2];
+    params->prev_partners->e[i]=partner;
+  }
+  return 0;
+}
+
 int observable_stress_tensor(void* params_p, double* A, unsigned int n_A) {
   unsigned int i;
   sortPartCfg();
@@ -1447,7 +1611,7 @@ int observable_nearest_neighbour_conditional (void* params_p, double* A, unsigne
   int i,j;
   double dist2;
   double mindist2;
-  double cutoff2=params->cutoff*params->cutoff;
+  double cutoff2=params->cutoff2;
   int partner=-1;
   double pos1[3], pos2[3], dist[3];
   ids1=params->ids1;
@@ -1482,10 +1646,11 @@ int observable_nearest_neighbour_conditional (void* params_p, double* A, unsigne
     }
     // check for a detachment event 
     if ( partner == -1 && params->prev_partners->e[i] != -1) {
+      params->conditions->e[i] *= -1;
       params->conditions->e[i] += 1;
     }
     if ( partner > -1 && params->prev_partners->e[i] == -1) {
-      params->conditions->e[i] += 1;
+      params->conditions->e[i] *= -1;
     }
     A[2*i]=params->conditions->e[i];
     A[2*i+1]=partner;
