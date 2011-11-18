@@ -36,12 +36,15 @@ int tclcommand_observable_print(Tcl_Interp* interp, int argc, char** argv, int* 
 }
 
 int tclcommand_observable_print_parameters(Tcl_Interp* interp, int argc, char** argv, int* change, observable* obs) {
+  int i;
   char buffer[TCL_DOUBLE_SPACE + TCL_INTEGER_SPACE + 3];
   double* values=malloc(obs->n*sizeof(double));
+  (*obs->fun)(obs->args, values, obs->n);
+
   if (argc==0) {
     sprintf(buffer," %d ",obs->n);
     Tcl_AppendResult(interp, obs->fun_name, buffer, (char *)NULL );
-    for (int i = 0; i<obs->n - 1; i++) {
+    for (i = 0; i<obs->n; i++) {
       Tcl_PrintDouble(interp, values[i], buffer);
       Tcl_AppendResult(interp, buffer, " ", (char *)NULL );
     }
@@ -1448,8 +1451,9 @@ int observable_particle_positions_conditional(void* params_p, double* A, unsigne
   double cut2 = params->cutoff2;
   int partner = -1; // by default ther is no partner
   IntList* ids1=params->ids1;
-  IntList* ids2=params->ids1;
+  IntList* ids2=params->ids2;
   sortPartCfg();
+
   for ( i = 0; i<ids1->n; i++ ) {
     // This checking should not be necessary if all functions are implemented properly
     if (ids1->e[i] >= n_total_particles)
@@ -1465,32 +1469,32 @@ int observable_particle_positions_conditional(void* params_p, double* A, unsigne
       pos2[2] = partCfg[j].r.p[2]; 
       get_mi_vector(dist,pos1,pos2);
       dist2= dist[0]*dist[0] + dist[1]*dist[1] + dist[2]*dist[2];
-      // FIXME setting the partners still missing
       if (dist2 < cut2) { 
 	partner=ids2->e[j];
       }
     }
     // if not, then check all other candidates
-    for ( j = 0; (i<ids2->n) && (partner == -1); i++ ) {
-      pos2[0] = partCfg[ids2->e[i]].r.p[0]; 
-      pos2[1] = partCfg[ids2->e[i]].r.p[1]; 
-      pos2[2] = partCfg[ids2->e[i]].r.p[2];
+    for ( j = 0; (j<ids2->n) && (partner == -1 ); j++ ) {
+      if (ids2->e[j] >= n_total_particles)
+        return 1; 
+      pos2[0] = partCfg[ids2->e[j]].r.p[0]; 
+      pos2[1] = partCfg[ids2->e[j]].r.p[1]; 
+      pos2[2] = partCfg[ids2->e[j]].r.p[2];
       get_mi_vector(dist,pos1,pos2);
       dist2= dist[0]*dist[0] + dist[1]*dist[1] + dist[2]*dist[2];
-      // FIXME setting the partners still missing
       if (dist2 < cut2) { 
 	partner=ids2->e[j];
       }
     }
     // check for a detachment event 
     if ( partner == -1 && params->prev_partners->e[i] != -1) {
-      params->conditions->e[i] *= -1;
       params->conditions->e[i] += 1;
+      params->conditions->e[i] *= -1;
     }
     if ( partner > -1 && params->prev_partners->e[i] == -1) {
       params->conditions->e[i] *= -1;
     }
-    A[4*i]=params->conditions->e[i];
+    A[4*i+0]=(double)params->conditions->e[i];
     A[4*i+1]=pos1[0];
     A[4*i+2]=pos1[1];
     A[4*i+3]=pos1[2];
@@ -1646,13 +1650,13 @@ int observable_nearest_neighbour_conditional (void* params_p, double* A, unsigne
     }
     // check for a detachment event 
     if ( partner == -1 && params->prev_partners->e[i] != -1) {
-      params->conditions->e[i] *= -1;
       params->conditions->e[i] += 1;
+      params->conditions->e[i] *= -1;
     }
     if ( partner > -1 && params->prev_partners->e[i] == -1) {
       params->conditions->e[i] *= -1;
     }
-    A[2*i]=params->conditions->e[i];
+    A[2*i+0]=params->conditions->e[i];
     A[2*i+1]=partner;
     params->prev_partners->e[i]=partner;
   }
