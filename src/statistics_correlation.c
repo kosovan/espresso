@@ -94,7 +94,6 @@ int correlation_update_from_file(unsigned int no) {
 }
 
 int correlation_print_parameters(double_correlation* self, Tcl_Interp* interp) {
-  int i;
   char buffer[16 + TCL_INTEGER_SPACE ];
   sprintf(buffer, " %d } ", self->autocorrelation);
   Tcl_AppendResult(interp, "{ autocorrelation ", buffer, (char *)NULL);
@@ -1519,31 +1518,28 @@ Compute the correlation if the condition is fulfiled, or zero otherwise
 Assume that the observable array is composed of the following sub-units
 arranged linearly one after another:
      condition; 
-     position[dim_A/dim_corr - 1];
+     position[ dim_A / (dim_A - dim_corr) ];
 
      correlate only values within the same block and if condition > 0
 */
 int square_distance_cond ( double* A, unsigned int dim_A, double* B, unsigned int dim_B, double* C, unsigned int dim_corr ) {
-  const double tiny=0.00001; // to void roundoff errors in double->int conversion
-  unsigned int i, j, stepA, stepC;
+  const double tiny=0.00001; // to avoid roundoff errors
+  unsigned int i, j, stepA, stepC, n_vals;
   double dist;
-  // FIXME this will not work
-  stepA=dim_A/dim_corr;
-  stepC=stepA-1;
-  fprintf(stderr,"stepA: %d stepC: %d, dim_A: %d, dim_corr: %d \n",stepA, stepC, dim_A, dim_corr);
-  for ( i = 0; i < dim_A-1; i+=stepA ) { 
-    fprintf(stderr,"i: %d,  A[i]: %.1lf  B[i]: %.1lf ",i,A[i],B[i]);
+  n_vals = dim_A - dim_corr; // A contains the values in d dimensions plus condition per each value, corr contains just the values
+  stepA=dim_A/n_vals;
+  stepC=dim_corr/n_vals;
+  for ( i = 0; i < n_vals; i++ ) { 
     // if both conditions are positive and the same and positive
-    if ( A[i] > 0 &&  fabs(A[i] - B[i]) < tiny  ) {
-      fprintf(stderr,"correlate\n");
-      for (j=1; j<stepC; j++) { 
-        dist=fabs(A[i+j+1] - B[i+j+1]);
+    if ( A[i*stepA] > 0 &&  fabs( A[i*stepA] - B[i*stepA] ) < tiny  ) {
+      for (j=0; j<stepC; j++) { 
+        dist = A[i*stepA+j+1] - B[i*stepA+j+1];
         C[i*stepC+j] = dist*dist; 
       }
     } else { 
-      fprintf(stderr,"skip\n");
-      for (j=0; j<stepC; j++) 
+      for (j=0; j<stepC; j++) {
         C[i*stepC+j] = 0.0;
+      }
     }
   }
   return 0;
@@ -1572,8 +1568,8 @@ int square_distance_cond_chain ( double* A, unsigned int dim_A, double* B, unsig
   imax=(dim_A-1)/2;
   for ( i = 0; i < imax; i++ ) { 
     // if both conditions are positive and the same and positive
-    if ( A[i] > 0 &&  fabs(A[i] - B[i]) < tiny  ) {
-      dist= fabs(A[i+1] - B[i+1]);
+    if ( A[2*i] > 0 &&  fabs(A[2*i] - B[2*i]) < tiny  ) {
+      dist= fabs(A[2*i+1] - B[2*i+1]);
       if (dist > halfmax) 
 	dist -= distmax;
       C[i] = dist < tiny ? 0.0 : dist*dist;

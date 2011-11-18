@@ -638,7 +638,6 @@ int tclcommand_observable_particle_positions_conditional(Tcl_Interp* interp, int
     free(nn_cond_params_p);
     return TCL_ERROR;
   }
-  //printf("n: %d\n", ids1->n); fflush(stdout); //exit(1);
   nn_cond_params_p=(nn_cond_params*)malloc(sizeof(nn_cond_params));
   nn_cond_params_p->ids1=ids1;
   *change=1+temp;
@@ -1458,10 +1457,11 @@ int observable_particle_positions_conditional(void* params_p, double* A, unsigne
     // This checking should not be necessary if all functions are implemented properly
     if (ids1->e[i] >= n_total_particles)
       return 1; 
-    pos1[0] = partCfg[ids1->e[i]].r.p[0]; 
-    pos1[1] = partCfg[ids1->e[i]].r.p[1]; 
-    pos1[2] = partCfg[ids1->e[i]].r.p[2];
+    pos1[0] = partCfg[ ids1->e[i] ].r.p[0]; 
+    pos1[1] = partCfg[ ids1->e[i] ].r.p[1]; 
+    pos1[2] = partCfg[ ids1->e[i] ].r.p[2];
     // first check for the last known partner
+    partner = -1;
     if ( params->prev_partners->e[i] != -1) {
       j = params->prev_partners->e[i];
       pos2[0] = partCfg[j].r.p[0]; 
@@ -1470,16 +1470,16 @@ int observable_particle_positions_conditional(void* params_p, double* A, unsigne
       get_mi_vector(dist,pos1,pos2);
       dist2= dist[0]*dist[0] + dist[1]*dist[1] + dist[2]*dist[2];
       if (dist2 < cut2) { 
-	partner=ids2->e[j];
+	partner=j;
       }
     }
     // if not, then check all other candidates
-    for ( j = 0; (j<ids2->n) && (partner == -1 ); j++ ) {
+    for ( j = 0; ( j < ids2->n ) && (partner == -1 ); j++ ) {
       if (ids2->e[j] >= n_total_particles)
         return 1; 
-      pos2[0] = partCfg[ids2->e[j]].r.p[0]; 
-      pos2[1] = partCfg[ids2->e[j]].r.p[1]; 
-      pos2[2] = partCfg[ids2->e[j]].r.p[2];
+      pos2[0] = partCfg[ ids2->e[j] ].r.p[0]; 
+      pos2[1] = partCfg[ ids2->e[j] ].r.p[1]; 
+      pos2[2] = partCfg[ ids2->e[j] ].r.p[2];
       get_mi_vector(dist,pos1,pos2);
       dist2= dist[0]*dist[0] + dist[1]*dist[1] + dist[2]*dist[2];
       if (dist2 < cut2) { 
@@ -1494,7 +1494,7 @@ int observable_particle_positions_conditional(void* params_p, double* A, unsigne
     if ( partner > -1 && params->prev_partners->e[i] == -1) {
       params->conditions->e[i] *= -1;
     }
-    A[4*i+0]=(double)params->conditions->e[i];
+    A[4*i+0]=(double)(params->conditions->e[i]);
     A[4*i+1]=pos1[0];
     A[4*i+2]=pos1[1];
     A[4*i+3]=pos1[2];
