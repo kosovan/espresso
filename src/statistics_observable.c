@@ -21,6 +21,7 @@
 #include "integrate.h"
 #include "lb.h"
 #include "pressure.h"
+#include "utils.h"
 
 observable** observables = 0;
 int n_observables = 0; 
@@ -701,6 +702,84 @@ int observable_reset_average(observable* self) {
     }
     return 0;
 }
+
+int observable_init_variance(observable* self, observable* reference_observable) {
+  self->n           = reference_observable->n;
+  self->container   = malloc(sizeof(observable_variance_container));
+  self->update      = &observable_update_variance;
+  self->calculate   = &observable_calc_variance;
+  self->last_value  = malloc(self->n*sizeof(double*));
+
+  self->container = malloc(sizeof(observable_variance_container));
+  observable_variance_container* data = (observable_variance_container*) self->container;
+  data->n_sweeps              = 0;
+  data->reference_observable  = reference_observable;
+  data->sum                   = malloc(self->n*sizeof(double*));
+  data->sum_squares           = malloc(self->n*sizeof(double*));
+  for (int i =0; i<self->n; i++) {
+    data->sum[i]=0;
+    data->sum_squares[i]=0;
+  }
+  return 0;
+}
+
+
+int observable_update_variance(observable* self) {
+    observable_variance_container* data = (observable_variance_container*) self->container;
+    data->n_sweeps++;
+    int error = observable_calculate(data->reference_observable);
+    for (int i =0; i<self->n; i++) {
+      data->sum[i] += data->reference_observable->last_value[i];
+      data->sum_squares[i] += SQR(data->reference_observable->last_value[i]);
+    }
+    return 0;
+}
+
+int observable_calc_variance(observable* self) {
+  observable_variance_container* data = (observable_variance_container*) self->container;
+  if (data->n_sweeps == 0)
+    return 1;
+  for (int i =0; i<self->n; i++) {
+    self->last_value[i] = data->sum_squares[i]/data->n_sweeps - SQR(data->sum[i]/data->n_sweeps);
+  }
+  return 0;
+}
+
+int observable_init_stddev(observable* self, observable* reference_observable) {
+  self->n           = reference_observable->n;
+  self->container   = malloc(sizeof(observable_variance_container));
+  self->update      = &observable_update_stddev;
+  self->calculate   = &observable_calc_stddev;
+  self->last_value  = malloc(self->n*sizeof(double*));
+
+  self->container = malloc(sizeof(observable_variance_container));
+  observable_variance_container* data = (observable_variance_container*) self->container;
+  data->n_sweeps              = 0;
+  data->reference_observable  = reference_observable;
+  data->sum                   = malloc(self->n*sizeof(double*));
+  data->sum_squares           = malloc(self->n*sizeof(double*));
+  for (int i =0; i<self->n; i++) {
+    data->sum[i]=0;
+    data->sum_squares[i]=0;
+  }
+  return 0;
+}
+
+
+int observable_update_stddev(observable* self) {
+  return observable_update_variance(self);
+}
+
+int observable_calc_stddev(observable* self) {
+  observable_variance_container* data = (observable_variance_container*) self->container;
+  if (data->n_sweeps == 0)
+    return 1;
+  for (int i =0; i<self->n; i++) {
+    self->last_value[i] = sqrt(data->sum_squares[i]/data->n_sweeps - SQR(data->sum[i]/data->n_sweeps));
+  }
+  return 0;
+}
+
 
 
 int observable_calc_structure_factor(observable* self) {

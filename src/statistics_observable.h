@@ -74,6 +74,21 @@ typedef struct {
   unsigned int n_sweeps;
 } observable_average_container;
 
+int observable_init_variance(observable* self, observable* reference_observable);
+int observable_update_variance(observable* self);
+int observable_calc_variance(observable* self);
+int observable_reset_variance(observable* self);
+typedef struct {
+  observable* reference_observable;
+  unsigned int n_sweeps;
+  double* sum;
+  double* sum_squares;
+} observable_variance_container;
+int observable_init_stddev(observable* self, observable* reference_observable);
+int observable_update_stddev(observable* self);
+int observable_calc_stddev(observable* self);
+int observable_reset_stddev(observable* self);
+
 /** Calculate structure factor from positions and scattering length */
 int observable_calc_structure_factor(observable* self);
 typedef struct {

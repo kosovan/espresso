@@ -184,3 +184,47 @@ if { ![ veccompare [ observable $av print ] { 1 1 1 } ] } {
   error "average is not working"
 }
 
+set stddev_o [ observable new stddev $p0 ]
+set variance_o [ observable new variance $p0 ]
+set valuelist [ list ]
+for { set i 0  } { $i < 10 } { incr i } {
+  part 0 pos $i $i $i
+  observable $stddev_o update
+  observable $variance_o update
+  lappend valuelist $i
+}
+
+proc mean { l } {
+  set sum 0.
+  foreach x $l {
+    set sum [ expr $sum + $x ]
+  }
+  return [ expr $sum / [ llength $l ] ]
+}
+
+proc stdev { l } {
+  set sum 0.
+  set themean [ mean $l ]
+  foreach x $l {
+    set sum [ expr $sum  + ($x-$themean)*($x-$themean) ]
+  }
+  return [ expr sqrt($sum / [ llength $l] ) ]
+}
+
+set stddev1 [ lindex [ observable $stddev_o print ] 0 ]
+set stddev2 [ stdev $valuelist ]
+set variance1 [ lindex [ observable $variance_o print ] 0 ]
+set variance2 [ expr $stddev2*$stddev2 ]
+
+puts "$stddev1 $stddev2 $variance1 $variance2"
+
+if { [ expr abs($stddev1 - $stddev2) > 1e-5 ] } {
+  error "stddev does not work"
+}
+
+
+if { [ expr abs($variance1 - $variance2) > 1e-5 ] } {
+  error "stddev does not work"
+}
+
+

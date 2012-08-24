@@ -21,7 +21,6 @@
 #include "statistics_observable.h"
 #include "particle_data.h"
 #include "parser.h"
-//#include "integrate.h"
 #include "lb.h"
 #include "pressure.h"
 
@@ -34,8 +33,6 @@ static int convert_types_to_ids(IntList * type_list, IntList * id_list);
   
 int parse_id_list(Tcl_Interp* interp, int argc, char** argv, int* change, IntList** ids ) {
   int i,ret;
-//  char** temp_argv; int temp_argc;
-//  int temp;
   IntList* input=malloc(sizeof(IntList));
   IntList* output=malloc(sizeof(IntList));
   init_intlist(input);
@@ -796,6 +793,44 @@ int tclcommand_observable_average(Tcl_Interp* interp, int argc, char** argv, int
   return TCL_OK;
 }
 
+int tclcommand_observable_variance(Tcl_Interp* interp, int argc, char** argv, int* change, observable* obs) {
+  int reference_observable;
+  if (argc < 2) {
+    Tcl_AppendResult(interp, "observable new variance <reference_id>", (char *)NULL);
+    return TCL_ERROR;
+  }
+  if (!ARG_IS_I(1,reference_observable)) {
+    Tcl_AppendResult(interp, "observable new variance <reference_id>", (char *)NULL);
+    return TCL_ERROR;
+  }
+  if (reference_observable >= n_observables) {
+    Tcl_AppendResult(interp, "The reference observable does not exist.", (char *)NULL);
+    return TCL_ERROR;
+  }
+  observable_init_variance(obs, observables[reference_observable]);
+
+  return TCL_OK;
+}
+
+int tclcommand_observable_stddev(Tcl_Interp* interp, int argc, char** argv, int* change, observable* obs) {
+  int reference_observable;
+  if (argc < 2) {
+    Tcl_AppendResult(interp, "observable new stddev <reference_id>", (char *)NULL);
+    return TCL_ERROR;
+  }
+  if (!ARG_IS_I(1,reference_observable)) {
+    Tcl_AppendResult(interp, "observable new stddev <reference_id>", (char *)NULL);
+    return TCL_ERROR;
+  }
+  if (reference_observable >= n_observables) {
+    Tcl_AppendResult(interp, "The reference observable does not exist.", (char *)NULL);
+    return TCL_ERROR;
+  }
+  observable_init_stddev(obs, observables[reference_observable]);
+
+  return TCL_OK;
+}
+
 
 
 //  if (ARG0_IS_S("textfile")) {
@@ -909,6 +944,8 @@ int tclcommand_observable(ClientData data, Tcl_Interp *interp, int argc, char **
     REGISTER_OBSERVABLE(lb_radial_velocity_profile, tclcommand_observable_lb_radial_velocity_profile,id);
     REGISTER_OBSERVABLE(tclcommand, tclcommand_observable_tclcommand,id);
     REGISTER_OBSERVABLE(average, tclcommand_observable_average,id);
+    REGISTER_OBSERVABLE(variance, tclcommand_observable_variance,id);
+    REGISTER_OBSERVABLE(stddev, tclcommand_observable_stddev,id);
     Tcl_AppendResult(interp, "Unknown observable ", argv[2] ,"\n", (char *)NULL);
     return TCL_ERROR;
   }
