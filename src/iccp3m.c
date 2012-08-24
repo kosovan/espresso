@@ -86,6 +86,13 @@ void iccp3m_init(void){
    iccp3m_cfg.exty = 0;
    iccp3m_cfg.extz = 0;
    iccp3m_cfg.first_id = 0;
+   iccp3m_cfg.num_iteration=30;
+   iccp3m_cfg.convergence=1e-2;
+   iccp3m_cfg.relax=0.7;
+   iccp3m_cfg.eout=1;
+   iccp3m_cfg.citeration=0;
+
+
 }
 
 
@@ -163,7 +170,7 @@ int iccp3m_iteration() {
             np   = cell->n;
             for(i=0 ; i < np; i++) {
                 id = part[i].p.identity - iccp3m_cfg.first_id;
-                if( id < iccp3m_cfg.n_ic ) {
+                if( id < iccp3m_cfg.n_ic && part[i].p.identity >= iccp3m_cfg.first_id ) {
            /* the dielectric-related prefactor: */                     
                       del_eps = (iccp3m_cfg.ein[id]-iccp3m_cfg.eout)/(iccp3m_cfg.ein[id] + iccp3m_cfg.eout)/6.283185307;
            /* calculate the electric field at the certain position */
