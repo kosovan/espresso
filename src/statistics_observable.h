@@ -67,6 +67,25 @@ int observable_calc_currents(observable* self);
 int observable_calc_dipole_moment(observable* self);
 #endif
 
+/* Here go the one-time simple derived observable */
+/* block average */
+int observable_init_block_average(observable* self, observable* reference_observable, unsigned int blocksize, unsigned int stride);
+int observable_calc_block_average(observable* self);
+typedef struct {
+  observable* reference_observable;
+  unsigned int blocksize;
+  unsigned int stride;
+  unsigned int n_sweeps;
+  unsigned int n_blocks;
+} block_container;
+
+/* block sum */
+int observable_init_block_sum(observable* self, observable* reference_observable, unsigned int blocksize, unsigned int stride);
+int observable_calc_block_sum(observable* self);
+
+
+
+/* average */
 int observable_update_average(observable* self);
 int observable_reset_average(observable* self);
 typedef struct {
@@ -74,6 +93,7 @@ typedef struct {
   unsigned int n_sweeps;
 } observable_average_container;
 
+/* variance */
 int observable_init_variance(observable* self, observable* reference_observable);
 int observable_update_variance(observable* self);
 int observable_calc_variance(observable* self);
@@ -84,6 +104,8 @@ typedef struct {
   double* sum;
   double* sum_squares;
 } observable_variance_container;
+
+/* stddev, also uses variance_container */
 int observable_init_stddev(observable* self, observable* reference_observable);
 int observable_update_stddev(observable* self);
 int observable_calc_stddev(observable* self);

@@ -115,7 +115,9 @@ set com_pos2 [ observable new com_position type 0 ]
 if { ![ veccompare [ observable $com_pos2 print ] { 2.25 0 0 } ] }  {
   error "com_pos2 is not working"
 }
-
+set temp [ observable new particle_positions id { 0 1 2 3 } ]
+set block_average [ observable new block_average $temp blocksize 2 stride 3 ]
+puts [ observable $block_average print ]
 
 ############# Observable com_position ##########
 set com_vel1 [ observable new com_velocity id { 0 1 } ]
@@ -215,8 +217,6 @@ set stddev1 [ lindex [ observable $stddev_o print ] 0 ]
 set stddev2 [ stdev $valuelist ]
 set variance1 [ lindex [ observable $variance_o print ] 0 ]
 set variance2 [ expr $stddev2*$stddev2 ]
-
-puts "$stddev1 $stddev2 $variance1 $variance2"
 
 if { [ expr abs($stddev1 - $stddev2) > 1e-5 ] } {
   error "stddev does not work"

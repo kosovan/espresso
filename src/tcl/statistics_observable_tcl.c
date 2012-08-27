@@ -793,6 +793,52 @@ int tclcommand_observable_average(Tcl_Interp* interp, int argc, char** argv, int
   return TCL_OK;
 }
 
+int tclcommand_observable_block_average(Tcl_Interp* interp, int argc, char** argv, int* change, observable* obs) {
+  int reference_observable;
+  unsigned int blocksize, stride;
+  if (argc < 2) {
+    Tcl_AppendResult(interp, "observable new average <reference_id> [ stride <d> ]", (char *)NULL);
+    return TCL_ERROR;
+  }
+  if (!ARG_IS_I(1,reference_observable)) {
+    Tcl_AppendResult(interp, "observable new average <reference_id> blocksize <b> [ stride <d> ]", (char *)NULL);
+    return TCL_ERROR;
+  }
+  argc-=2;
+  argv+=2;
+  if (reference_observable >= n_observables) {
+    Tcl_AppendResult(interp, "The reference observable does not exist.", (char *)NULL);
+    return TCL_ERROR;
+  }
+  while (argc>0) {
+    if ( ARG0_IS_S("blocksize")){
+      if (argc>1 && ARG1_IS_I(stride)) {
+        argc-=2;
+        argv+=2;
+        *change+=2;
+      } else {
+        Tcl_AppendResult(interp, "Error in block_average: blocksize must be int.\n" , (char *)NULL);
+        return TCL_ERROR;
+      }
+    } else if ( ARG0_IS_S("stride")){
+      if (argc>1 && ARG1_IS_I(stride)) {
+        argc-=2;
+        argv+=2;
+        *change+=2;
+      } else {
+        Tcl_AppendResult(interp, "Error in block_average: stride must be int.\n" , (char *)NULL);
+        return TCL_ERROR;
+      }
+    } else   {
+      Tcl_AppendResult(interp, "wrong argument to block_average\n" , (char *)NULL);
+      return TCL_ERROR;
+    }
+  }
+  observable_init_block_average(obs, observables[reference_observable], blocksize, stride);
+  return TCL_OK;
+}
+
+
 int tclcommand_observable_variance(Tcl_Interp* interp, int argc, char** argv, int* change, observable* obs) {
   int reference_observable;
   if (argc < 2) {
@@ -943,6 +989,7 @@ int tclcommand_observable(ClientData data, Tcl_Interp *interp, int argc, char **
     REGISTER_OBSERVABLE(flux_density_profile, tclcommand_observable_flux_density_profile,id);
     REGISTER_OBSERVABLE(lb_radial_velocity_profile, tclcommand_observable_lb_radial_velocity_profile,id);
     REGISTER_OBSERVABLE(tclcommand, tclcommand_observable_tclcommand,id);
+    REGISTER_OBSERVABLE(block_average, tclcommand_observable_block_average,id);
     REGISTER_OBSERVABLE(average, tclcommand_observable_average,id);
     REGISTER_OBSERVABLE(variance, tclcommand_observable_variance,id);
     REGISTER_OBSERVABLE(stddev, tclcommand_observable_stddev,id);

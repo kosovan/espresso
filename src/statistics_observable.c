@@ -680,6 +680,48 @@ int observable_calc_stress_tensor_acf_obs(observable* self) {
   return 0;
 }
 
+int observable_init_block_average(observable* self, observable* reference_observable, unsigned int blocksize, unsigned int stride) {
+  if (reference_observable->n % blocksize != 0) {
+    return 1;
+  }
+  if (reference_observable->n % stride != 0) {
+    return 1;
+  }
+  self->n = reference_observable->n / blocksize;
+  self->container   = malloc(sizeof(block_container));
+  self->update      = 0;
+  self->calculate   = &observable_calc_block_average;
+  self->last_value  = malloc(self->n*sizeof(double*));
+ 
+  block_container* container = (block_container*) self->container;
+  container->stride=stride;
+  container->blocksize=blocksize;
+  container->reference_observable = reference_observable;
+
+  return 0;
+}
+
+int observable_calc_block_average(observable* self) {
+  block_container* data = (block_container*) self->container;
+  int error = observable_calculate(data->reference_observable);
+  if (error != 0) 
+    return error;
+
+  for (int i = 0; i<self->n; i++) 
+    self->last_value[i] = 0;
+
+  for (int i=0; i<data->n_blocks; i++) 
+    for (int j=0; j<data->blocksize; j++)
+      for (int k=0; k<data->stride; k++) 
+        self->last_value[i*data->stride+k]+=data->reference_observable->last_value[i*(data->blocksize*data->stride)+j*data->stride+k];
+
+  for (int i = 0; i<self->n; i++) 
+    self->last_value[i] /= data->blocksize;
+  return 0;
+
+}
+
+
 int observable_update_average(observable* self) {
     observable_average_container* data = (observable_average_container*) self->container;
     data->n_sweeps++;
