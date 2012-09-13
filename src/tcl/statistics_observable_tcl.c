@@ -749,8 +749,8 @@ int tclcommand_observable_interacts_with(Tcl_Interp* interp, int argc, char** ar
   }
   *change+=temp;
   iw_params_p->ids2=ids2;
-  if ( argc < 5 || !ARG_IS_D(5,cutoff)) {
-    Tcl_AppendResult(interp, "Usage: analyze correlation ... interacts_with id_list1 id_list2 cutoff", (char *)NULL);
+  if ( argc < 6 || !ARG_IS_D(5,cutoff)) {
+    Tcl_AppendResult(interp, "Usage: interacts_with id_list1 id_list2 cutoff", (char *)NULL);
     free(ids1);
     free(ids2);
     free(iw_params_p);
@@ -758,11 +758,101 @@ int tclcommand_observable_interacts_with(Tcl_Interp* interp, int argc, char** ar
   } 
   *change+=1;
   iw_params_p->cutoff=cutoff;
+  obs->calculate=&observable_calc_interacts_with;
   obs->container=(void*)iw_params_p;
   obs->n=ids1->n; // number of ids from the 1st argument
+  obs->last_update=-1; // needs update before use
   obs->last_value=malloc(obs->n*sizeof(double));
   return TCL_OK;
 }
+
+int tclcommand_observable_interaction_lifetimes(Tcl_Interp* interp, int argc, char** argv, int* change, observable* obs) {
+  lft_params* params;
+  IntList *ids1, *ids2, *old_states; 
+  DoubleList *times;
+  int temp; 
+  int mask=1; // default mask value
+  int i; // index variable
+  double cutoff;
+  ids1=(IntList*)malloc(sizeof(IntList));
+  ids2=(IntList*)malloc(sizeof(IntList));
+  obs->obs_name=strdup("interaction_lifetimes");
+  if ( argc > 7 ) {
+    Tcl_AppendResult(interp, "Error in observable interaction_lifetimes: too many args\n\
+Usage: lifetimes id_list1 id_list2 cutoff mask", (char *)NULL);
+    free(ids1);
+    free(ids2);
+    return TCL_ERROR;
+  }
+  if (! parse_id_list(interp, argc-1, argv+1, &temp, &ids1) == TCL_OK ) {
+    free(ids1);
+    free(ids2);
+    return TCL_ERROR;
+  }
+  *change=1+temp;
+  if (! parse_id_list(interp, argc-3, argv+3, &temp, &ids2) == TCL_OK ) {
+    free(ids1);
+    free(ids2);
+    return TCL_ERROR;
+  }
+  *change+=temp;
+  if ( argc < 6 || !ARG_IS_D(5,cutoff)) {
+    Tcl_AppendResult(interp, "Usage: ", obs->obs_name," id_list1 id_list2 cutoff mask", (char *)NULL);
+    free(ids1);
+    free(ids2);
+    return TCL_ERROR;
+  }
+  if (cutoff <= 0 ) {
+    Tcl_AppendResult(interp, "Observable ", obs->obs_name, ": need cutoff > 0", (char *)NULL);
+    free(ids1);
+    free(ids2);
+    return TCL_ERROR;
+  }
+  *change+=1;
+  if ( argc < 7 || !ARG_IS_I(6,mask)) {
+    Tcl_AppendResult(interp, "Usage: ", obs->obs_name," id_list1 id_list2 cutoff mask", (char *)NULL);
+    free(ids1);
+    free(ids2);
+    return TCL_ERROR;
+  } 
+  if (mask != 1 && mask !=-1 ) {
+    Tcl_AppendResult(interp, "Observable ", obs->obs_name, ": mask must be -1 or 1", (char *)NULL);
+    free(ids1);
+    free(ids2);
+    return TCL_ERROR;
+  }
+  *change+=1;
+  
+  params=(lft_params*)malloc(sizeof(lft_params));
+  // allocate and initialize times and old_states
+  times=(DoubleList*)malloc(sizeof(DoubleList));
+  alloc_doublelist(times,ids1->n);
+  times->n=ids1->n;
+  old_states=(IntList*)malloc(sizeof(IntList));
+  alloc_intlist(old_states,ids1->n);
+  old_states->n=ids1->n;
+  // initially set all old_states negative
+  for(i=0;i<old_states->max;i++) 
+    old_states->e[i]=-1*mask;
+  params->ids1=ids1;
+  params->ids2=ids2;
+  params->old_states=old_states;
+  params->times=times;
+  params->cutoff=cutoff;
+  params->mask=mask;
+  params->max_n=ids1->n;
+  
+  obs->calculate=&observable_calc_interaction_lifetimes;
+  obs->update=&observable_update_interaction_lifetimes;
+  obs->container=(void*)params;
+  obs->n=0;
+  obs->last_value=malloc(params->max_n*sizeof(double));
+  for (i=0; i<params->max_n; i++)  {
+    obs->last_value[i]=0.0;
+  }
+  return TCL_OK;
+}
+
 
 int tclcommand_observable_average(Tcl_Interp* interp, int argc, char** argv, int* change, observable* obs) {
   int reference_observable;
@@ -784,7 +874,7 @@ int tclcommand_observable_average(Tcl_Interp* interp, int argc, char** argv, int
   obs->n = container->reference_observable->n;
   obs->last_value=malloc(obs->n*sizeof(double));
   for (int i=0; i<obs->n; i++) 
-    obs->last_value[i] = 0;
+    obs->last_value[i] = 0.0;
 
   obs->container=container;
   obs->update=&observable_update_average;
@@ -980,6 +1070,7 @@ int tclcommand_observable(ClientData data, Tcl_Interp *interp, int argc, char **
     REGISTER_OBSERVABLE(dipole_moment, tclcommand_observable_dipole_moment,id);
 //    REGISTER_OBSERVABLE(structure_factor, tclcommand_observable_structure_factor,id);
     REGISTER_OBSERVABLE(interacts_with, tclcommand_observable_interacts_with,id);
+    REGISTER_OBSERVABLE(interaction_lifetimes, tclcommand_observable_interaction_lifetimes,id);
   //  REGISTER_OBSERVABLE(obs_nothing, tclcommand_observable_obs_nothing,id);
   //  REGISTER_OBSERVABLE(flux_profile, tclcommand_observable_flux_profile,id);
     REGISTER_OBSERVABLE(density_profile, tclcommand_observable_density_profile,id);
@@ -1113,7 +1204,7 @@ int file_data_source_readline(void* xargs, double* A, int dim_A) {
 //  // function prototype from man page:
 //  // int Tcl_SplitList(interp, list, argcPtr, argvPtr)
 //  if (tmp_argc < n_A) {
-//    Tcl_AppendResult(input_data->interp, "Not enough arguments passed to analyze correlation update", (char *)NULL);
+//    Tcl_AppendResult(input_data->interp, "Not enough arguments passed to update", (char *)NULL);
 //    return 1;
 //  }
 //  for (i = 0; i < n_A; i++) {
@@ -1415,7 +1506,7 @@ int tclcommand_parse_radial_profile(Tcl_Interp* interp, int argc, char** argv, i
 int tclcommand_observable_print(Tcl_Interp* interp, int argc, char** argv, int* change, observable* obs) {
   char buffer[TCL_DOUBLE_SPACE];
   if ( observable_calculate(obs) ) {
-    Tcl_AppendResult(interp, "\nFailed to compute observable tclcommand\n", (char *)NULL );
+    Tcl_AppendResult(interp, "\nFailed to compute observable\n", (char *)NULL );
     return TCL_ERROR;
   }
   if (argc==0) {
@@ -1454,8 +1545,8 @@ int tclcommand_observable_print_formatted(Tcl_Interp* interp, int argc, char** a
     Tcl_AppendResult(interp, "Observable can not be printed formatted\n", (char *)NULL );
     return TCL_ERROR;
   }
-
 }
+
 
 int tclcommand_observable_update(Tcl_Interp* interp, int argc, char** argv, int* change, observable* obs) {
   char buffer[TCL_DOUBLE_SPACE];

@@ -910,7 +910,81 @@ int observable_calc_interacts_with (observable* self) {
   return 0;
 }
 
+int observable_update_interaction_lifetimes (observable* self) {  
+    // FIXME if last_update > sim_time, we should produce an understandable error message   
+    if (self->last_update < sim_time || self->last_update>0 ) {
+        return observable_calc_interaction_lifetimes (self); 
+    } else { 
+        return 0;
+    }
+}
 
-
+int observable_calc_interaction_lifetimes (observable* self) {
+  int current_state;
+  lft_params *params=(lft_params*) self->container;
+  IntList* ids1;
+  IntList* ids2;
+  IntList* old_states;
+  DoubleList* times;
+  int i,j, n, mask;
+  double delta; // instantaneous time difference
+  double dist2;
+  double cutoff2=params->cutoff*params->cutoff;
+  double pos1[3], pos2[3], dist[3];
+  ids1=params->ids1;
+  ids2=params->ids2;
+  old_states=params->old_states;
+  times=params->times;
+  mask=params->mask;
+  sortPartCfg();
+  for ( i = 0; i<ids1->n; i++ ) {
+    if (ids1->e[i] >= n_total_particles)
+      return 1;
+    pos1[0]=partCfg[ids1->e[i]].r.p[0];
+    pos1[1]=partCfg[ids1->e[i]].r.p[1];
+    pos1[2]=partCfg[ids1->e[i]].r.p[2];
+    for ( j = 0; j<ids2->n; j++ ) {
+      if (ids2->e[j] == ids1->e[i]) // do not count self-interaction :-)
+        continue;
+      if (ids2->e[j] >= n_total_particles)
+        return 1;
+      current_state = -1;
+      pos2[0]=partCfg[ids2->e[j]].r.p[0];
+      pos2[1]=partCfg[ids2->e[j]].r.p[1];
+      pos2[2]=partCfg[ids2->e[j]].r.p[2];
+      get_mi_vector(dist,pos1,pos2);
+      dist2= dist[0]*dist[0] + dist[1]*dist[1] + dist[2]*dist[2];
+      if(dist2<cutoff2) {
+        current_state = 1;
+	    break; // interaction found for i, go for next
+      }
+    }
+    if (old_states->e[i]*mask == 1 && current_state*mask == -1 ) {
+        // if there was a positive state and now it's negative, it's an event end
+        //fprintf(stderr,"event end: i=%d, old:%d, current:%d\n",i,old_states->e[i]*mask,current_state*mask);
+        // check if we have enough memory 
+        if (params->max_n == self->n) {
+            params->max_n*=2;
+            self->last_value=realloc((void*)self->last_value,params->max_n*sizeof(double));
+            for(n=params->max_n/2;n<params->max_n;n++)
+                self->last_value[n]=0.0;
+        }
+        // mark the state change 
+        old_states->e[i] *= -1;
+        // compute the time difference and write it to observable
+        delta = sim_time - times->e[i];
+        self->last_value[self->n]=delta;
+        self->n++;
+    } else if  (old_states->e[i]*mask == -1 && current_state*mask == 1) {
+        // if there was a negative state and now it's positive, it's an event start
+        //fprintf(stderr,"event start: i=%d, old:%d, current:%d\n",i,old_states->e[i]*mask,current_state*mask);
+        // mark it and record the time
+        old_states->e[i] *= -1;
+        times->e[i] = sim_time;
+    }
+  }
+  self->last_update=sim_time;
+  return 0;
+}
 
 

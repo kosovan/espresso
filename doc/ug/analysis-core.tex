@@ -171,7 +171,32 @@ system:
           \var{particle\_specifications2} is found within the distance 
           defined by the \var{cutoff}. If no such neighbour is found, the 
           observable is zero. The observable has one dimension per each 
-          particle of \var{particle\_specifications_1}
+          particle of \var{particle\_specifications_1} Exception: interaction
+          with itself is not counted if \var{particle\_specifications1}
+          and \var{particle\_specifications2} happen to conatain a particle with the same id.
+
+    \item \lit{inter_lifetimes} \var{particle\_specifications1} \var{particle\_specifications2} \var{cutoff} \var{mask}\\
+          Computes lifetimes of interacting particle pairs.
+          Similar to \lit{interacts_with}, each particles defined in \var{particle\_specifications1}
+          is considered interacting if any particle defined in \var{particle\_specifications2}
+          is present within distance defined by \var{cutoff}. Same exclusion of self-interaction
+          applies.\\
+          Upon observable update (calling either \lit{update} or \lit{print}), state of each
+          particle (interacting=1, not interacting=-1) is checked. If it has changed from 
+          -1 to 1, the interaction event starts and the time is recorded. When upon a later
+          update state of the same particle changes back to (-1), time difference is 
+          computed and appended to the observable \lit{inter_lifetimes}.\\
+          Setting \var{mask} to (-1) makes \lit{inter_lifetimes} compute lifetimes of
+          non-interacting states.\\
+          \todo[inline]{This will fully work with autoupdating of observables. Currently
+          updating/autoupdating of observables is under development and not documented.}
+          Dimension of this observable is variable. It is greater or equal to the number 
+          of recorded binding/unbinding events (one floating point value per event).
+          Non-zero values corresopnd to recorded events. They may be followed by a number
+          of zero values corresponding to allocated memory for possible future events.
+          \todo[inline]{Should be fixed in future. User does not care about extra memory
+          which does not contain meaningful data.}
+
     \item \lit{density_profile}  \var{particle\_specifications} \var{profile\_specifications} \\
           Compute the density profile within the specified cube.
           For profile specifications, see section~\ref{sec:DensProfSpec}.

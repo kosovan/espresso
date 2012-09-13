@@ -134,6 +134,23 @@ typedef struct {
   IntList *ids2;
 } iw_params;
 
+/** If a particle changes its state from "bound" to "unbound", record the lag time between 
+binding and unbiding.
+If the state is bound, it positive, otherwise it is zero.
+Mask of (-1) should be used to switch behaviour to measuring
+unbound lifetimes.
+*/
+int observable_calc_interaction_lifetimes(observable* self);
+int observable_update_interaction_lifetimes(observable* self);
+typedef struct {
+  double cutoff;
+  IntList *ids1;
+  IntList *ids2;
+  IntList *old_states;  // tracker for states in the past
+  DoubleList *times;  // times when the old_states have become positive
+  int max_n; // last entry where we have written
+  int mask; // 1 = binding, -1 = unbinding
+} lft_params;
 
 /** Do nothing */
 int observable_calc_obs_nothing (observable* self);

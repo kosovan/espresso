@@ -165,6 +165,40 @@ if { ![ veccompare [ observable $com_force print ] { -1 0 0 } ] } {
   error "particle_forces is not working"
 }
 
+############# Observable interacts_with and interaction_lifetimes ###### 
+set pid [setmd n_part];
+part $pid           pos 0.0 1.0 1.0 type 0
+part [expr $pid+1]  pos -0.5 1.0 1.0 type 1
+set cut 1.0;
+set pos_mask 1;
+set neg_mask -1;
+set inter_id [observable new interacts_with id $pid id [expr $pid+1] $cut];
+set lft_pos_id [observable new interaction_lifetimes id $pid id [expr $pid+1] $cut  $pos_mask];
+set lft_neg_id [observable new interaction_lifetimes id $pid id [expr $pid+1] $cut  $neg_mask];
+setmd time 0;
+set inter_expect 1.0;
+if { [observable $inter_id print] != $inter_expect } {
+    error "inter failed, should be \"$inter_expect\", is \"[observable $inter_id print]\" ";
+}
+for {set i 0} {$i<10} {incr i} {
+    setmd time [expr [setmd time]+$i]
+    part [expr $pid+1] pos [expr (0.5+$i%2)*$cut] 1.0 1.0;
+    observable $lft_pos_id update;
+    observable $lft_neg_id update;
+}
+set inter_expect 0.0;
+if { [observable $inter_id print] != $inter_expect } {
+    error "inter failed, should be \"$inter_expect\", is \"[observable $inter_id print]\" ";
+}
+set lft_pos_expect "1.0 3.0 5.0 7.0 9.0 "
+if { [observable $lft_pos_id print] != $lft_pos_expect } {
+    error "lft_pos failed, should be \"$lft_pos_expect\", is \"[observable $lft_pos_id print]\" ";
+}
+set lft_neg_expect "2.0 4.0 6.0 8.0 "
+if { [observable $lft_neg_id print] != $lft_neg_expect } {
+    error "lft_neg failed, should be \"$lft_neg_expect\", is \"[observable $lft_neg_id print]\" ";
+}
+
 ############# Observable tcl command #######################
 proc p1 {} {
   return { 1 2 3 }
