@@ -27,6 +27,7 @@
 */
 
 #include "utils.hpp"
+#include <gsl/gsl_rng.h>
 
 /*----------------------------------------------------------*/
 
@@ -58,6 +59,13 @@ extern long  iv[NTAB_RANDOM];
 #define MULTIPLY 16807.
 #define NWARM 10000
 
+#include <sys/types.h>
+#ifdef __U64_TYPE
+typedef __U64_TYPE uint8;
+#else
+#error "you must define what type is u8b int"
+#endif
+
 extern int bit_seed;
 extern int rand_w_array[MERS_BIT_RANDOM];
 extern int random_pointer_1;
@@ -71,11 +79,26 @@ typedef struct {
 } RandomStatus;
 
 void   init_random(void);
+//void   udev_seed(unsigned int s);
+void   d_random_seed(unsigned int s);
 void   init_random_seed(long seed);
 void   init_random_stat(RandomStatus my_stat);
 long   print_random_idum(void);
 long   print_random_seed(void);
 RandomStatus  print_random_stat(void);
+
+static uint8 udev_u,udev_v=4101842887655102017LL,udev_w=1;
+
+//inline double udev()
+inline double d_random()
+{ // NR3, period 3e57, (0,1)
+	uint8 udev_x;
+	udev_u=udev_u*2862933555777941757LL+7046029254386353087LL;
+	udev_v^=udev_v>>17; udev_v^=udev_v<<31; udev_v^=udev_v>>8;
+	udev_w=4294957665U*(udev_w&0xffffffff)+(udev_w>>32);
+	udev_x=udev_u^(udev_u<<21); udev_x^=udev_x>>35; udev_x^=udev_x<<4;
+	return 5.42101086242752217e-20*((udev_x+udev_v)^udev_w);
+}
 
 /** classical RAN1 random number generator */
 inline long l_random(void)
@@ -107,15 +130,16 @@ inline int i_random(int maxint)
 
 /*----------------------------------------------------------------------*/
 
-inline double d_random(void)
-{
-  /* delivers a uniform double between 0 and 1 */
-  double temp;
-  iy = l_random();
-  if ((temp = AM * iy) > RNMX) 
-    temp = RNMX;
-  return temp;
-}
+//inline double d_random(void)
+//{
+//  /* delivers a uniform double between 0 and 1 */
+////  double temp;
+////  iy = l_random();
+////  if ((temp = AM * iy) > RNMX) 
+////    temp = RNMX;
+////  return temp;
+//  return rand()/(double)RAND_MAX; 
+//}
 
 /*----------------------------------------------------------------------*/
 

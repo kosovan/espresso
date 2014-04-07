@@ -51,6 +51,15 @@ void init_random(void)
   seed = (10*this_node+1)*1103515245 + 12345;
   seed = (seed/65536) % 32768;
   init_random_seed((long)seed);
+  d_random_seed((unsigned int)seed);
+}
+
+//void udev_seed(unsigned int udev_s)
+void d_random_seed(unsigned int udev_s)
+{ // random seed
+	//udev_u=udev_s^udev_v; udev(); udev_v=u; udev(); udev_w=udev_v; udev();
+	udev_u=udev_s^udev_v; d_random(); udev_v=udev_u; d_random(); udev_w=udev_v; d_random();
+	return;
 }
 
 /*----------------------------------------------------------------------*/
