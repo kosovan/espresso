@@ -219,6 +219,10 @@ int double_correlation_init(double_correlation* self, double dt, unsigned int ta
     dim_corr = dim_A;
     self->corr_operation = &componentwise_product;
     self->args = NULL;
+  } else if ( strcmp(corr_operation_name,"dyadic_product") == 0 ) {
+    dim_corr = dim_A*dim_B;
+    self->corr_operation = &dyadic_product;
+    self->args = NULL;
   } else if ( strcmp(corr_operation_name,"complex_conjugate_product") == 0 ) {
     dim_corr = dim_A;
     self->corr_operation = &complex_conjugate_product;
@@ -226,6 +230,10 @@ int double_correlation_init(double_correlation* self, double dt, unsigned int ta
   } else if ( strcmp(corr_operation_name,"square_distance_componentwise") == 0 ) {
     dim_corr = dim_A;
     self->corr_operation = &square_distance_componentwise;
+    self->args = NULL;
+  } else if ( strcmp(corr_operation_name,"square_distance_dyadic") == 0 ) {
+    dim_corr = dim_A*dim_A;
+    self->corr_operation = &square_distance_dyadic;
     self->args = NULL;
   } else if ( strcmp(corr_operation_name,"fcs_acf") == 0 ) {
     if (dim_A %3 )
@@ -670,6 +678,31 @@ int square_distance_componentwise ( double* A, unsigned int dim_A, double* B, un
   }
   return 0;
 }
+
+int square_distance_dyadic ( double* A, unsigned int dim_A, double* B, unsigned int dim_B, double* C, unsigned int dim_corr, void *args ) {
+  unsigned int i,j;
+  if (!(dim_A == dim_B )) {
+    printf("Error in square distance dyadic: The vector sizes do not match\n");
+    return 5;
+  }
+  for ( i = 0; i < dim_A; i++ ) {
+    for ( j = 0; j < dim_A; j++ ) {
+      C[i*dim_A+j] = (A[i]-B[i])*(A[j]-B[j]);
+    }
+  }
+  return 0;
+}
+
+int dyadic_product ( double* A, unsigned int dim_A, double* B, unsigned int dim_B, double* C, unsigned int dim_corr, void *args ) {
+  unsigned int i,j;
+  for ( i = 0; i < dim_A; i++ ) {
+    for ( j = 0; j < dim_B; j++ ) {
+      C[i*dim_B+j] = (A[i])*(B[j]);
+    }
+  }
+  return 0;
+}
+
 
 
 int fcs_acf ( double* A, unsigned int dim_A, double* B, unsigned int dim_B, double* C, unsigned int dim_corr, void *args ) {

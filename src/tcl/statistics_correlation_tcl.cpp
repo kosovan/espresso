@@ -574,10 +574,16 @@ int parse_corr_operation(Tcl_Interp* interp, int argc, char** argv, int* change,
   if (ARG_IS_S_EXACT(0,"componentwise_product")) {
     *change=1;
     return TCL_OK;
+  } else if (ARG_IS_S_EXACT(0,"dyadic_product")) {
+    *change=1;
+    return TCL_OK;
   } else if (ARG_IS_S_EXACT(0,"complex_conjugate_product")) {
     *change=1;
     return TCL_OK;
   } else if (ARG_IS_S_EXACT(0,"square_distance_componentwise")) {
+    *change=1;
+    return TCL_OK;
+  } else if (ARG_IS_S_EXACT(0,"square_distance_dyadic")) {
     *change=1;
     return TCL_OK;
   } else if (ARG_IS_S_EXACT(0,"fcs_acf")) {
