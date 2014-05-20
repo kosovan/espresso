@@ -24,6 +24,7 @@ AM_DEFAULT_SOURCE_EXT = .cpp
 
 noinst_LTLIBRARIES = libEspressoTcl.la
 libEspressoTcl_la_SOURCES = \
+	TclOutputHelper.hpp \
 	bin_tcl.cpp \
 	binary_file_tcl.cpp binary_file_tcl.hpp \
 	blockfile_tcl.cpp \
@@ -36,6 +37,7 @@ libEspressoTcl_la_SOURCES = \
 	constraint_tcl.cpp constraint_tcl.hpp \
 	domain_decomposition_tcl.cpp domain_decomposition_tcl.hpp \
 	electrokinetics_tcl.cpp electrokinetics_tcl.hpp \
+	external_potential_tcl.cpp external_potential_tcl.hpp \
 	energy_tcl.cpp \
 	galilei_tcl.cpp galilei_tcl.hpp \
 	global_tcl.cpp global_tcl.hpp \
@@ -90,7 +92,8 @@ libEspressoTcl_la_SOURCES += \
 	soft_sphere_tcl.cpp soft_sphere_tcl.hpp \
 	steppot_tcl.cpp steppot_tcl.hpp \
 	tab_tcl.cpp tab_tcl.hpp \
-	tunable_slip_tcl.cpp tunable_slip_tcl.hpp
+	tunable_slip_tcl.cpp tunable_slip_tcl.hpp \
+	harmonic_force_tcl.cpp harmonic_force_tcl.hpp
 
 # bonded potentials and forces
 libEspressoTcl_la_SOURCES += \
@@ -152,7 +155,6 @@ Espresso_install_CPPFLAGS = -D ESPRESSO_SCRIPTS_DEFAULT=\"$(scriptsdir)\" $(AM_C
 Espresso_install_SOURCES = scriptsdir.cpp main.cpp
 Espresso_install_LDADD = libEspressoTcl.la ../libEspresso.la 
 
-
 ESPRESSO = `echo Espresso | sed '$(transform)'`$(EXEEXT)
 ESPRESSO_INSTALL = `echo Espresso.install | sed '$(transform)'`$(EXEEXT)
 # rename Espresso after installation
@@ -163,3 +165,25 @@ install-exec-hook:
 
 uninstall-local:
 	-rm -f $(DESTDIR)$(bindir)/$(ESPRESSO)
+
+#################################################################
+# Build an empty CUDA object
+#################################################################
+# this is necessary since Xcode 4.3 otherwise builds binaries
+# with a broken dyld relocation table
+if CUDA
+
+SUFFIXES=.cu
+
+cuda_verbose = $(cuda_verbose_@AM_V@)
+cuda_verbose_ = $(cuda_verbose_@AM_DEFAULT_V@)
+cuda_verbose_0 = @echo "  NVCC     $@";
+.cu.o:
+	$(cuda_verbose)$(NVCC) \
+		$(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) \
+		$(AM_NVCCFLAGS) $(NVCCFLAGS) -c -o $@ $<
+
+Espresso_SOURCES += cuda_workaround.cu
+Espresso_install_SOURCES += cuda_workaround.cu
+
+endif
