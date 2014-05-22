@@ -87,19 +87,6 @@ long   print_random_idum(void);
 long   print_random_seed(void);
 RandomStatus  print_random_stat(void);
 
-static uint8 udev_u,udev_v=4101842887655102017LL,udev_w=1;
-
-//inline double udev()
-inline double d_random()
-{ // NR3, period 3e57, (0,1)
-	uint8 udev_x;
-	udev_u=udev_u*2862933555777941757LL+7046029254386353087LL;
-	udev_v^=udev_v>>17; udev_v^=udev_v<<31; udev_v^=udev_v>>8;
-	udev_w=4294957665U*(udev_w&0xffffffff)+(udev_w>>32);
-	udev_x=udev_u^(udev_u<<21); udev_x^=udev_x>>35; udev_x^=udev_x<<4;
-	return 5.42101086242752217e-20*((udev_x+udev_v)^udev_w);
-}
-
 /** classical RAN1 random number generator */
 inline long l_random(void)
 {
@@ -130,16 +117,42 @@ inline int i_random(int maxint)
 
 /*----------------------------------------------------------------------*/
 
-//inline double d_random(void)
-//{
-//  /* delivers a uniform double between 0 and 1 */
-////  double temp;
-////  iy = l_random();
-////  if ((temp = AM * iy) > RNMX) 
-////    temp = RNMX;
-////  return temp;
-//  return rand()/(double)RAND_MAX; 
-//}
+//#define RNG_RAN1
+#ifndef RNG_RAN1
+#define RNG_NR3
+#endif
+
+static uint8 d_random_n_calls=0;
+#ifdef RNG_RAN1
+static char d_random_rng_name[]="ran1";
+inline double d_random(void)
+{
+  /* delivers a uniform double between 0 and 1 */
+  double temp;
+  iy = l_random();
+  if ((temp = AM * iy) > RNMX) 
+    temp = RNMX;
+  d_random_n_calls++;
+  return temp;
+}
+#endif
+
+#ifdef RNG_NR3
+static uint8 udev_u,udev_v=4101842887655102017LL,udev_w=1;
+static char d_random_rng_name[100]="NR3";
+//inline double udev()
+inline double d_random()
+{ // NR3, period 3e57, (0,1)
+	uint8 udev_x;
+	udev_u=udev_u*2862933555777941757LL+7046029254386353087LL;
+	udev_v^=udev_v>>17; udev_v^=udev_v<<31; udev_v^=udev_v>>8;
+	udev_w=4294957665U*(udev_w&0xffffffff)+(udev_w>>32);
+	udev_x=udev_u^(udev_u<<21); udev_x^=udev_x>>35; udev_x^=udev_x<<4;
+	d_random_n_calls++;
+	return 5.42101086242752217e-20*((udev_x+udev_v)^udev_w);
+}
+#endif
+
 
 /*----------------------------------------------------------------------*/
 

@@ -22,6 +22,8 @@
 #define RANDOM_TCL_H_
 #include "parser.hpp"
 
+int tclcommand_d_random_n_calls(ClientData data, Tcl_Interp *interp, int argc, char **argv);
+
 /**  Implementation of the tcl command \ref tclcommand_t_random. Access to the
      parallel random number generator.
 */

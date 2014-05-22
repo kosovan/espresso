@@ -157,6 +157,7 @@ static void register_tcl_commands(Tcl_Interp* interp) {
   /* in file random.cpp */
   REGISTER_COMMAND("t_random", tclcommand_t_random);
   REGISTER_COMMAND("bit_random", tclcommand_bit_random);
+  REGISTER_COMMAND("d_random_n_calls",tclcommand_d_random_n_calls);
   /* in file blockfile_tcl.cpp */
   REGISTER_COMMAND("blockfile", tclcommand_blockfile);
   /* in constraint.cpp */

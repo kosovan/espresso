@@ -51,9 +51,12 @@ void init_random(void)
   seed = (10*this_node+1)*1103515245 + 12345;
   seed = (seed/65536) % 32768;
   init_random_seed((long)seed);
+#ifdef RNG_NR3
   d_random_seed((unsigned int)seed);
+#endif
 }
 
+#ifdef RNG_NR3
 //void udev_seed(unsigned int udev_s)
 void d_random_seed(unsigned int udev_s)
 { // random seed
@@ -61,6 +64,8 @@ void d_random_seed(unsigned int udev_s)
 	udev_u=udev_s^udev_v; d_random(); udev_v=udev_u; d_random(); udev_w=udev_v; d_random();
 	return;
 }
+#endif
+
 
 /*----------------------------------------------------------------------*/
 
