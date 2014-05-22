@@ -397,6 +397,7 @@ int tclcommand_correlation_parse_corr(Tcl_Interp* interp, int no, int argc, char
         error = double_correlation_get_data(&correlations[no]);
         if (error) {
           Tcl_AppendResult(interp, double_correlation_get_data_errors[error], (char *)NULL);
+	  return TCL_ERROR;
         } else {
           return TCL_OK;
         }
@@ -574,10 +575,16 @@ int parse_corr_operation(Tcl_Interp* interp, int argc, char** argv, int* change,
   if (ARG_IS_S_EXACT(0,"componentwise_product")) {
     *change=1;
     return TCL_OK;
+  } else if (ARG_IS_S_EXACT(0,"dyadic_product")) {
+    *change=1;
+    return TCL_OK;
   } else if (ARG_IS_S_EXACT(0,"complex_conjugate_product")) {
     *change=1;
     return TCL_OK;
   } else if (ARG_IS_S_EXACT(0,"square_distance_componentwise")) {
+    *change=1;
+    return TCL_OK;
+  } else if (ARG_IS_S_EXACT(0,"square_distance_dyadic")) {
     *change=1;
     return TCL_OK;
   } else if (ARG_IS_S_EXACT(0,"fcs_acf")) {
@@ -638,7 +645,7 @@ int double_correlation_print_spherically_averaged_sf(double_correlation* self, T
 
   int qi,qj,qk,qn, dim_sf, order2;
   double dt=self->dt;
-  observable_sf_params* params=(observable_sf_params*)self->A_obs->args;
+  observable_sf_params* params=(observable_sf_params*)self->A_obs->container;
   char buffer[TCL_DOUBLE_SPACE];
   int *q_vals;
   double *q_density;
