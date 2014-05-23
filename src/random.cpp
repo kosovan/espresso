@@ -41,7 +41,17 @@ int rand_w_array[MERS_BIT_RANDOM];
 int random_pointer_1 = -1;
 int random_pointer_2 = -1;
 
+uint8 d_random_n_calls=0;
+
 /*----------------------------------------------------------------------*/
+
+#ifdef RNG_NR3
+const char d_random_rng_name[]="NR3";
+#else
+const char d_random_rng_name[]="ran1";
+#endif
+uint8  get_n_calls(void) { return d_random_n_calls; }
+char*  get_rng_name(void) { return (char*)d_random_rng_name; }
 
 void init_random(void)
 {
@@ -54,6 +64,7 @@ void init_random(void)
 #ifdef RNG_NR3
   d_random_seed((unsigned int)seed);
 #endif
+  d_random_n_calls=0;
 }
 
 #ifdef RNG_NR3

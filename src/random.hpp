@@ -27,7 +27,6 @@
 */
 
 #include "utils.hpp"
-#include <gsl/gsl_rng.h>
 
 /*----------------------------------------------------------*/
 
@@ -117,14 +116,18 @@ inline int i_random(int maxint)
 
 /*----------------------------------------------------------------------*/
 
+extern uint8 d_random_n_calls;
+
+// Functions to retrieve information about the rng
+uint8  get_n_calls(void);
+char*  get_rng_name(void);
+
 //#define RNG_RAN1
 #ifndef RNG_RAN1
 #define RNG_NR3
 #endif
 
-static uint8 d_random_n_calls=0;
 #ifdef RNG_RAN1
-static char d_random_rng_name[]="ran1";
 inline double d_random(void)
 {
   /* delivers a uniform double between 0 and 1 */
@@ -139,8 +142,6 @@ inline double d_random(void)
 
 #ifdef RNG_NR3
 static uint8 udev_u,udev_v=4101842887655102017LL,udev_w=1;
-static char d_random_rng_name[100]="NR3";
-//inline double udev()
 inline double d_random()
 { // NR3, period 3e57, (0,1)
 	uint8 udev_x;

@@ -28,10 +28,13 @@
 #include "communication.hpp"
 
 
+
 /*----------------------------------------------------------------------*/
 int tclcommand_d_random_n_calls(ClientData data, Tcl_Interp *interp, int argc, char **argv) {
     char buffer[100 + TCL_DOUBLE_SPACE + 3*TCL_INTEGER_SPACE];
-    sprintf(buffer,"%ld = %g calls to d_random using %s RNG\n",d_random_n_calls,(float)d_random_n_calls,d_random_rng_name);
+    uint8 n=get_n_calls();
+    sprintf(buffer,"%ld (%.4e) calls to d_random using %s RNG\n",n,(float)n,get_rng_name());
+    //,d_random_rng_name);
     Tcl_AppendResult(interp, buffer, (char *) NULL); 
     return (TCL_OK);
 }
