@@ -1615,11 +1615,11 @@ int observable_update_inter_lifetimes (observable* self) {
     if (self->last_update < sim_time) {
         return observable_calc_inter_lifetimes (self); 
     } else if (self->last_update == 0.0) {
-        fprintf(stderr,"need to init: old:%d, mask:%d, last update:%lf, autoupdate: %d\n",params->old_states->e[0]*params->mask,params->mask,self->last_update,self->autoupdate);
+        //fprintf(stderr,"need to init: old:%d, mask:%d, last update:%lf, autoupdate: %d\n",params->old_states->e[0]*params->mask,params->mask,self->last_update,self->autoupdate);
         return observable_calc_inter_lifetimes (self); 
     } else {
 		// no need to update
-        fprintf(stderr,"observable up to date: old:%d, mask:%d, last update:%lf\n",params->old_states->e[0]*params->mask,params->mask,self->last_update);
+        //fprintf(stderr,"observable up to date: old:%d, mask:%d, last update:%lf\n",params->old_states->e[0]*params->mask,params->mask,self->last_update);
         return 0;
     }
 }
@@ -1667,12 +1667,12 @@ int observable_calc_inter_lifetimes (observable* self) {
     }
     if (old_states->e[i]*mask == 1 && current_state*mask == -1 ) {
         // if there was a positive state and now it's negative, it's an event end
-        fprintf(stderr,"event end: i=%d, old:%d, current:%d, mask:%d\n",i,old_states->e[i]*mask,current_state*mask,mask);
+        //fprintf(stderr,"event end: i=%d, old:%d, current:%d, mask:%d\n",i,old_states->e[i]*mask,current_state*mask,mask);
         // check if we have enough memory 
         if (params->next_n == self->n) {
             self->n*=2;
             self->last_value=(double*)Utils::realloc((void*)self->last_value,self->n*sizeof(double));
-            fprintf(stderr,"realloc\n");
+            //fprintf(stderr,"realloc\n");
             for(n=self->n/2;n<self->n;n++)
                 self->last_value[n]=0.0;
         }
@@ -1684,18 +1684,18 @@ int observable_calc_inter_lifetimes (observable* self) {
         params->next_n++;
     } else if  (old_states->e[i]*mask == -1 && current_state*mask == 1) {
         // if there was a negative state and now it's positive, it's an event start
-        fprintf(stderr,"event start: i=%d, old:%d, current:%d, mask:%d\n",i,old_states->e[i]*mask,current_state*mask,mask);
+        //fprintf(stderr,"event start: i=%d, old:%d, current:%d, mask:%d\n",i,old_states->e[i]*mask,current_state*mask,mask);
         // mark it and record the time
         old_states->e[i] *= -1;
         times->e[i] = sim_time;
     } else if  (old_states->e[i] == 0) {
 	    // the history is empty for now, need to fill it
-        fprintf(stderr,"init: i=%d, old:%d, current:%d, mask:%d\n",i,old_states->e[i]*mask,current_state*mask,mask);
+        //fprintf(stderr,"init: i=%d, old:%d, current:%d, mask:%d\n",i,old_states->e[i]*mask,current_state*mask,mask);
 		old_states->e[i] = current_state;
         times->e[i] = sim_time;
 		init=true; // mark that this call was the initialization
 	} else {
-        fprintf(stderr,"no event\n");
+        //fprintf(stderr,"no event\n");
 	}
   }
   if (!init)
