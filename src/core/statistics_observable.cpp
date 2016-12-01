@@ -1575,10 +1575,107 @@ int observable_polymer_k_distribution(observable *self){
 void autoupdate_observables() {
   int i;
   for (i=0; i<n_observables; i++) {
-//    printf("checking observable %d autoupdate is %d \n", i, observables[i]->autoupdate);
+//    fprintf(stderr,"checking observable %d autoupdate is %d \n", i, observables[i]->autoupdate);
     if (observables[i]->autoupdate && sim_time-observables[i]->last_update>observables[i]->autoupdate_dt*0.99999) {
-//      printf("updating %d\n", i);
+//      fprintf(stderr,"updating %d\n", i);
       observable_update(observables[i]);
     }
   }
+}
+
+int observable_update_inter_lifetimes (observable* self) {  
+    // FIXME if last_update > sim_time, we should produce an understandable error message   
+    lft_params *params=(lft_params*) self->container;
+    if (self->last_update < sim_time) {
+        return observable_calc_inter_lifetimes (self); 
+    } else if (self->last_update == 0.0) {
+        //fprintf(stderr,"need to init: old:%d, mask:%d, last update:%lf, autoupdate: %d\n",params->old_states->e[0]*params->mask,params->mask,self->last_update,self->autoupdate);
+        return observable_calc_inter_lifetimes (self); 
+    } else {
+		// no need to update
+        //fprintf(stderr,"observable up to date: old:%d, mask:%d, last update:%lf\n",params->old_states->e[0]*params->mask,params->mask,self->last_update);
+        return 0;
+    }
+}
+
+int observable_calc_inter_lifetimes (observable* self) {
+  int current_state;
+  lft_params *params=(lft_params*) self->container;
+  IntList* ids1;
+  IntList* ids2;
+  IntList* old_states;
+  DoubleList* times;
+  int i,j, n, mask;
+  bool init = false; // flag if we are doing initialization
+  double delta; // instantaneous time difference
+  double dist2;
+  double cutoff2=params->cutoff*params->cutoff;
+  double pos1[3], pos2[3], dist[3];
+  ids1=params->ids1;
+  ids2=params->ids2;
+  old_states=params->old_states;
+  times=params->times;
+  mask=params->mask;
+  sortPartCfg();
+  for ( i = 0; i<ids1->n; i++ ) {
+    if (ids1->e[i] >= n_part)
+      return 1;
+    pos1[0]=partCfg[ids1->e[i]].r.p[0];
+    pos1[1]=partCfg[ids1->e[i]].r.p[1];
+    pos1[2]=partCfg[ids1->e[i]].r.p[2];
+    for ( j = 0; j<ids2->n; j++ ) {
+      if (ids2->e[j] == ids1->e[i]) // do not count self-interaction :-)
+        continue;
+      if (ids2->e[j] >= n_part)
+        return 1;
+      current_state = -1;
+      pos2[0]=partCfg[ids2->e[j]].r.p[0];
+      pos2[1]=partCfg[ids2->e[j]].r.p[1];
+      pos2[2]=partCfg[ids2->e[j]].r.p[2];
+      get_mi_vector(dist,pos1,pos2);
+      dist2= dist[0]*dist[0] + dist[1]*dist[1] + dist[2]*dist[2];
+      if(dist2<cutoff2) {
+        current_state = 1;
+	    break; // interaction found for i, go for next
+      }
+    }
+    if (old_states->e[i]*mask == 1 && current_state*mask == -1 ) {
+        // if there was a positive state and now it's negative, it's an event end
+        //fprintf(stderr,"event end: i=%d, old:%d, current:%d, mask:%d\n",i,old_states->e[i]*mask,current_state*mask,mask);
+        // check if we have enough memory 
+        if (params->next_n == self->n) {
+            self->n*=2;
+            self->last_value=(double*)Utils::realloc((void*)self->last_value,self->n*sizeof(double));
+            //fprintf(stderr,"realloc\n");
+            for(n=self->n/2;n<self->n;n++)
+                self->last_value[n]=0.0;
+        }
+        // mark the state change 
+        old_states->e[i] *= -1;
+        // compute the time difference and write it to observable
+        delta = sim_time - times->e[i];
+        self->last_value[params->next_n]=delta;
+        params->next_n++;
+    } else if  (old_states->e[i]*mask == -1 && current_state*mask == 1) {
+        // if there was a negative state and now it's positive, it's an event start
+        //fprintf(stderr,"event start: i=%d, old:%d, current:%d, mask:%d\n",i,old_states->e[i]*mask,current_state*mask,mask);
+        // mark it and record the time
+        old_states->e[i] *= -1;
+        times->e[i] = sim_time;
+    } else if  (old_states->e[i] == 0) {
+	    // the history is empty for now, need to fill it
+        //fprintf(stderr,"init: i=%d, old:%d, current:%d, mask:%d\n",i,old_states->e[i]*mask,current_state*mask,mask);
+		old_states->e[i] = current_state;
+        times->e[i] = sim_time;
+		init=true; // mark that this call was the initialization
+	} else {
+        //fprintf(stderr,"no event\n");
+	}
+  }
+  if (!init)
+  	self->last_update=sim_time;
+  else 
+	// force an update for the next time;
+  	self->last_update=sim_time-1.0;
+  return 0;
 }

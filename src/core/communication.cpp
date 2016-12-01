@@ -1386,7 +1386,7 @@ void mpi_minimize_energy_slave(int a, int b) {
 /********************* REQ_INTEGRATE ********/
 int mpi_integrate(int n_steps, int reuse_forces)
 {
-  if (!correlations_autoupdate) {
+  if (!correlations_autoupdate && !observables_autoupdate) {
     mpi_call(mpi_integrate_slave, n_steps, reuse_forces);
     integrate_vv(n_steps, reuse_forces);
     COMM_TRACE(fprintf(stderr, "%d: integration task %d done.\n", \
@@ -1398,7 +1398,12 @@ int mpi_integrate(int n_steps, int reuse_forces)
       reuse_forces = 0; // makes even less sense after the first time step
       COMM_TRACE(fprintf(stderr, "%d: integration task %d done.\n",     \
                          this_node, i));
-      autoupdate_correlations();
+      if (correlations_autoupdate) {
+		  autoupdate_correlations();
+	  }
+      if (observables_autoupdate) {
+		  autoupdate_observables();
+	  }
     }
   }
   return mpi_check_runtime_errors();

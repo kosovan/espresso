@@ -29,6 +29,7 @@
 int tclcommand_observable_print_formatted(Tcl_Interp* interp, int argc, char** argv, int* change, observable* obs, double* values);
 int tclcommand_observable_print(Tcl_Interp* interp, int argc, char** argv, int* change, observable* obs);
 int tclcommand_observable_update(Tcl_Interp* interp, int argc, char** argv, int* change, observable* obs);
+int tclcommand_observable_parse_autoupdate(Tcl_Interp* interp, int no, int argc, char** argv);
 
 static int convert_types_to_ids(IntList * type_list, IntList * id_list); 
   
@@ -935,6 +936,92 @@ int tclcommand_observable_interacts_with(Tcl_Interp* interp, int argc, char** ar
   return TCL_OK;
 }
 
+int tclcommand_observable_inter_lifetimes(Tcl_Interp* interp, int argc, char** argv, int* change, observable* obs) {
+  lft_params* params;
+  IntList *ids1, *ids2, *old_states; 
+  DoubleList *times;
+  int temp; 
+  int mask=1; // default mask value
+  int i; // index variable
+  double cutoff;
+  ids1=(IntList*)Utils::malloc(sizeof(IntList));
+  ids2=(IntList*)Utils::malloc(sizeof(IntList));
+  obs->obs_name=strdup("inter_lifetimes");
+  if ( argc > 7 ) {
+    Tcl_AppendResult(interp, "Error in observable inter_lifetimes: too many args\n\
+Usage: lifetimes id_list1 id_list2 cutoff mask", (char *)NULL);
+    free(ids1);
+    free(ids2);
+    return TCL_ERROR;
+  }
+  if (! parse_id_list(interp, argc-1, argv+1, &temp, &ids1) == TCL_OK ) {
+    free(ids1);
+    free(ids2);
+    return TCL_ERROR;
+  }
+  *change=1+temp;
+  if (! parse_id_list(interp, argc-3, argv+3, &temp, &ids2) == TCL_OK ) {
+    free(ids1);
+    free(ids2);
+    return TCL_ERROR;
+  }
+  *change+=temp;
+  if ( argc < 6 || !ARG_IS_D(5,cutoff)) {
+    Tcl_AppendResult(interp, "Usage: ", obs->obs_name," id_list1 id_list2 cutoff mask", (char *)NULL);
+    free(ids1);
+    free(ids2);
+    return TCL_ERROR;
+  }
+  if (cutoff <= 0 ) {
+    Tcl_AppendResult(interp, "Observable ", obs->obs_name, ": need cutoff > 0", (char *)NULL);
+    free(ids1);
+    free(ids2);
+    return TCL_ERROR;
+  }
+  *change+=1;
+  if ( argc < 7 || !ARG_IS_I(6,mask)) {
+    Tcl_AppendResult(interp, "Usage: ", obs->obs_name," id_list1 id_list2 cutoff mask", (char *)NULL);
+    free(ids1);
+    free(ids2);
+    return TCL_ERROR;
+  } 
+  if (mask != 1 && mask !=-1 ) {
+    Tcl_AppendResult(interp, "Observable ", obs->obs_name, ": mask must be -1 or 1", (char *)NULL);
+    free(ids1);
+    free(ids2);
+    return TCL_ERROR;
+  }
+  *change+=1;
+  
+  params=(lft_params*)Utils::malloc(sizeof(lft_params));
+  // allocate and initialize times and old_states
+  times=(DoubleList*)Utils::malloc(sizeof(DoubleList));
+  alloc_doublelist(times,ids1->n);
+  old_states=(IntList*)Utils::malloc(sizeof(IntList));
+  alloc_intlist(old_states,ids1->n);
+  old_states->n=ids1->n;
+  // initially set all old_states to empty
+  for(i=0;i<old_states->n;i++) 
+    old_states->e[i]=0;
+  params->ids1=ids1;
+  params->ids2=ids2;
+  params->old_states=old_states;
+  params->times=times;
+  params->cutoff=cutoff;
+  params->mask=mask;
+  params->next_n=0;
+  
+  obs->calculate=&observable_calc_inter_lifetimes;
+  obs->update=&observable_update_inter_lifetimes;
+  obs->container=(void*)params;
+  obs->n=ids1->n;
+  obs->last_value=(double*)Utils::malloc(obs->n*sizeof(double));
+  for (i=0; i<obs->n; i++)  {
+    obs->last_value[i]=0.0;
+  }
+  return TCL_OK;
+}
+
 int tclcommand_observable_average(Tcl_Interp* interp, int argc, char** argv, int* change, observable* obs) {
   int reference_observable;
   if (argc < 2) {
@@ -1378,6 +1465,7 @@ int tclcommand_observable(ClientData data, Tcl_Interp *interp, int argc, char **
 	REGISTER_OBSERVABLE(spatial_polymer_property, tcl_command_spatial_polymer_properties, id);
 	REGISTER_OBSERVABLE(persistence_length, tcl_command_persistence_length, id);
 	REGISTER_OBSERVABLE(polymer_pair_correlation, tcl_command_k_dist, id);
+    REGISTER_OBSERVABLE(inter_lifetimes, tclcommand_observable_inter_lifetimes,id);
     REGISTER_OBSERVABLE(tclcommand, tclcommand_observable_tclcommand,id);
     Tcl_AppendResult(interp, "Unknown observable ", argv[2] ,"\n", (char *)NULL);
     return TCL_ERROR;
@@ -1415,22 +1503,57 @@ int tclcommand_observable(ClientData data, Tcl_Interp *interp, int argc, char **
       return TCL_OK;
     }
     if (argc > 2 && ARG_IS_S(2,"autoupdate") ) {
-      if (argc > 3 && ARG_IS_D(3, observables[n]->autoupdate_dt) ) {
-        if (observables[n]->autoupdate_dt < 1e-5) {
-          observables[n]->autoupdate=0;
-        } else {
-          observables[n]->autoupdate=1;
-          observables_autoupdate = 1;
-        }
-        return TCL_OK;
-      } else {
-        Tcl_AppendResult(interp, "Usage observable <id> autoupdate <dt>\n", (char *)NULL);
-        return TCL_ERROR;
-      }
-
+        return tclcommand_observable_parse_autoupdate(interp, n, argc-3, argv+3);
     }
   }
   Tcl_AppendResult(interp, "Unknown observable ", argv[1] ,"\n", (char *)NULL);
+  return TCL_ERROR;
+}
+
+int tclcommand_observable_parse_autoupdate(Tcl_Interp* interp, int no, int argc, char** argv) { 
+	char buffer[TCL_INTEGER_SPACE+30];
+	double dt; 
+	int i;
+//	for (i=0; i<argc; i++) {
+//		      fprintf(stderr,"arg[%d]=%s\n",i,argv[i]);
+//	}
+  if (argc > 0 ) {
+    if (ARG0_IS_S("start")) {
+      if(observables[no]->autoupdate) {
+		   sprintf(buffer,"%d, already in autoupdate mode", no);
+        Tcl_AppendResult(interp, "Could not start autoupdating observable", buffer, (char *)NULL);
+        return TCL_ERROR;
+	  } else if (argc > 1) { 
+		  if (!ARG_IS_D(1,dt)) { 
+              Tcl_AppendResult(interp, "observable autoupdate: expected double for dt, got ", argv[1], (char *)NULL);
+			  return TCL_ERROR;
+		  } else {
+			  observables_autoupdate = 1; 
+			  observables[no]->last_update=sim_time; 
+			  observables[no]->autoupdate=1;
+			  observables[no]->autoupdate_dt=dt;
+		  } 
+		  return TCL_OK;
+      } else {
+		      sprintf(buffer,"%d, arguments", argc);
+              Tcl_AppendResult(interp, "got ", buffer, (char *)NULL); 
+			  return TCL_ERROR;
+	  }
+    } else if (ARG0_IS_S("stop")) {
+      observables_autoupdate=0;
+      observables[no]->autoupdate=0;
+      for (unsigned i=0; i<n_observables; i++) {
+        if (observables[i]->autoupdate)
+          observables_autoupdate=1;
+      }
+      return TCL_OK;
+    } else if (ARG0_IS_S("status")) {
+		sprintf(buffer,"%d", observables[no]->autoupdate);
+		Tcl_AppendResult(interp, buffer, (char *)NULL);
+      return TCL_OK;
+    }
+  }
+  Tcl_AppendResult(interp, "Usage: observable $n autoupdate [ start [dt] | stop | status ]\n", (char *)NULL);
   return TCL_ERROR;
 }
 
@@ -1844,3 +1967,6 @@ int observable_calc_tclcommand(observable* self) {
   }
   return 0;
 }
+
+
+

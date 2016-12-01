@@ -1160,8 +1160,10 @@ int python_integrate(int n_steps, bool recalc_forces, bool reuse_forces)
       if (mpi_integrate(1, reuse_forces))
         return ES_ERROR;
       reuse_forces=1;
-      autoupdate_observables();
-      autoupdate_correlations();
+      if (correlations_autoupdate) 
+		  autoupdate_correlations();
+      if (observables_autoupdate) 
+		  autoupdate_observables();
     }
     if (n_steps == 0){
       if (mpi_integrate(0, reuse_forces))
