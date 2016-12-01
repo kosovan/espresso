@@ -6,10 +6,18 @@
 # notice and this notice are preserved.  This file is offered as-is,
 # without any warranty.
 #
+
+
 if test -n "$PYTHONPATH"; then
-    PYTHONPATH=$PYTHONPATH:@CMAKE_CURRENT_BINARY_DIR@
+  PYTHONPATH=@PYTHON_DIR@:$PYTHONPATH
 else
-    PYTHONPATH=@CMAKE_CURRENT_BINARY_DIR@
+  PYTHONPATH=@PYTHON_DIR@
 fi
 export PYTHONPATH
+
+if [ "$1" = "--gdb" ]; then
+  shift
+  exec gdb -ex run --args @PYTHON_EXECUTABLE@ $@
+fi
+
 exec @PYTHON_EXECUTABLE@ $@

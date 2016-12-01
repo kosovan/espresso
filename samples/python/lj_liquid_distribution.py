@@ -21,8 +21,6 @@ import espressomd._system as es
 import espressomd
 from espressomd import thermostat
 from espressomd import code_info
-from espressomd import analyze
-from espressomd import integrate
 import numpy
 
 print("""
@@ -54,8 +52,7 @@ lj_cap = 20
 #############################################################
 system = espressomd.System()
 system.time_step = 0.01
-system.skin = 0.4
-#es._espressoHandle.Tcl_Eval('thermostat langevin 1.0 1.0')
+system.cell_system.skin = 0.4
 system.thermostat.set_langevin(kT=1.0, gamma=1.0)
 
 # warmup integration (with capped LJ potential)
@@ -115,15 +112,14 @@ for i in range(n_part):
         system.part.add(type=1, id=i, pos=numpy.random.random(3) * system.box_l)
 
 
-analyze.distto(system, 0)
 
 print("Simulate {} particles in a cubic simulation box {} at density {}."
       .format(n_part, box_l, density).strip())
 print("Interactions:\n")
-act_min_dist = analyze.mindist(system)
+act_min_dist = system.analysis.mindist()
 print("Start with minimal distance {}".format(act_min_dist))
 
-system.max_num_cells = 2744
+system.cell_system.max_num_cells = 2744
 
 #############################################################
 #  Warmup Integration                                       #
@@ -150,9 +146,9 @@ print(system.non_bonded_inter[0, 0].lennard_jones)
 # Warmup Integration Loop
 i = 0
 while (i < warm_n_times and act_min_dist < min_dist):
-    integrate.integrate(warm_steps)
+    system.integrator.run(warm_steps)
     # Warmup criterion
-    act_min_dist = analyze.mindist(system)
+    act_min_dist = system.analysis.mindist()
 #  print("\rrun %d at time=%f (LJ cap=%f) min dist = %f\r" % (i,system.time,lj_cap,act_min_dist), end=' ')
     i += 1
 
@@ -164,29 +160,17 @@ while (i < warm_n_times and act_min_dist < min_dist):
     system.non_bonded_inter.set_force_cap(lj_cap)
 
 # Just to see what else we may get from the c code
-print("""
-ro variables:
-cell_grid     {0.cell_grid}
-cell_size     {0.cell_size} 
-local_box_l   {0.local_box_l} 
-max_cut       {0.max_cut}
-max_part      {0.max_part}
-max_range     {0.max_range} 
-max_skin      {0.max_skin}
-n_nodes       {0.n_nodes}
-n_part        {0.n_part}
-n_part_types  {0.n_part_types}
-periodicity   {0.periodicity}
-transfer_rate {0.transfer_rate}
-verlet_reuse  {0.verlet_reuse}
-""".format(system))
+import pprint
+pprint.pprint(system.cell_system.get_state(), width=1)
+# pprint.pprint(system.part.__getstate__(), width=1)
+pprint.pprint(system.__getstate__(), width=1)
 
 # write parameter file
 
 # polyBlockWrite "$name$ident.set" {box_l time_step skin} ""
 set_file = open("pylj_liquid.set", "w")
 set_file.write("box_l %s\ntime_step %s\nskin %s\n" %
-               (box_l, system.time_step, system.skin))
+               (box_l, system.time_step, system.cell_system.skin))
 
 
 #############################################################
@@ -199,33 +183,27 @@ lj_cap = 0
 system.non_bonded_inter.set_force_cap(lj_cap)
 print(system.non_bonded_inter[0, 0].lennard_jones)
 
-# print initial energies
-#energies = es._espressoHandle.Tcl_Eval('analyze energy')
-energies = analyze.energy(system=system)
+# print(initial energies)
+energies = system.analysis.energy()
 print(energies)
 
 j = 0
 for i in range(0, int_n_times):
     print("run %d at time=%f " % (i, system.time))
 
-#  es._espressoHandle.Tcl_Eval('integrate %d' % int_steps)
-    integrate.integrate(int_steps)
+    system.integrator.run(int_steps)
 
-    r, dist = analyze.distribution(system, type_list_a=distr_type_list_a, type_list_b=distr_type_list_b,
+    r, dist = system.analysis.distribution(type_list_a=distr_type_list_a, type_list_b=distr_type_list_b,
                                    r_min=distr_r_min, r_max=distr_r_max, r_bins=distr_r_bins, 
                                    log_flag=distr_log_flag, int_flag=distr_int_flag)
     distr_r = r
     distr_values += dist
 
-#  energies = es._espressoHandle.Tcl_Eval('analyze energy')
-    energies = analyze.energy(system=system)
+    energies = system.analysis.energy()
     print(energies)
     obs_file.write('{ time %s } %s\n' % (system.time, energies))
-    linear_momentum = analyze.analyze_linear_momentum(system=system)
+    linear_momentum = system.analysis.analyze_linear_momentum()
     print(linear_momentum)
-    # print(analyze.calc_rh(system,0,3,5))
-    # print(analyze.calc_rg(system,0,3,5))
-    # print(analyze.calc_re(system,0,3,5))
 
 #   write observables
 #    set energies [analyze energy]
@@ -242,7 +220,7 @@ for i in range(0, int_n_times):
 #rescale distribution values and write out data
 distr_values /= int_n_times
 
-for i in xrange(distr_r_bins):
+for i in range(distr_r_bins):
     distr_file.write("{0}\t{1}\n".format(distr_r[i], distr_values[i]))
 distr_file.close()
 

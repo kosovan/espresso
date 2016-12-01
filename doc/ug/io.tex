@@ -98,12 +98,9 @@ h5md_init \var{/where/to/store/data/file} [\var{list\_of\_p\_ids}]
 \end{essyntax}
 The \codebox{h5md_init} command initializes the H5MD file and
 creates groups and datasets according to the conventions of H5MD (see
-\url{http://nongnu.org/h5md/}). The init command assumes that the filename ends
-with the suffix ".h5". If there is no filename present matching with the given,
-the filename will be given the suffix "_1.h5". In order to safely start from a
+\url{http://nongnu.org/h5md/}). In order to safely start from a
 checkpoint the init command automatically copies the old file to a new file
-with incremented suffix index (e.g. "_2.h5" for the first start from a
-checkpoint). The optional argument \var{list\_of\_p\_ids} can be provided. In
+with a "tmp" suffix. The optional argument \var{list\_of\_p\_ids} can be provided. In
 this case observables are written for these particle ids only.
 
 \subsection{\keyword{h5md_write_positions}: Write particle positions to H5MD
@@ -175,11 +172,11 @@ Closes the H5MD data file.
 
 \section{Writing H5MD-files with Python}
 To write data in a hdf5-file, first an object of the class \texttt{h5md} has to be created and linked to the respective hdf5-file. This may, for example, look like:
-\begin{pycode}
+\begin{pypresso}
 from espressomd import h5md
 system = espressomd.System()
 h5=h5md.h5md("File.h5",system)
-\end{pycode}
+\end{pypresso}
 The \texttt{h5md} class contains the sub-class \texttt{write_to_h5}, which contains all write commands such as \texttt{userdefined}. The sample python script ``h5md_WriteFile.py'' shows the usage of writing a hdf5-file.
 
 \subsection{\keyword{userdefined}: Write an arbitrary value}
@@ -376,7 +373,7 @@ Variant \variant{3} write only the seed(s) which were
 used to initialize the random number generators. Note that this
 information is not sufficient to restore the full state of a random
 number generator, because the internal state might contain more
-information.
+information and evolves over time.
 
 \subsection{Writing all stored configurations}
 \label{sec:blockfile:configs}
@@ -427,7 +424,7 @@ to the file \lit{data.dat}.
   \variant{3} blockfile \var{channel} read auto 
   \variant{4} blockfile \var{channel} read \alt{particles \asep
     interactions \asep bonds \asep variable \asep seed \asep random
-    \asep bitrandom \asep configs}
+    \asep configs}
 \end{essyntax}
 
 Variants \variant{1} and \variant{2} are the low-level block-reading
@@ -442,7 +439,7 @@ Variant \variant{3} reads in one block and does the following:
   this procedure takes over (\var{tag} is the first expression in the
   block). For most block types, at least all mentioned above, \ie
   \keyword{particles}, \keyword{interactions}, \keyword{bonds},
-  \keyword{seed}, \keyword{random}, \keyword{bitrandom},
+  \keyword{seed}, \keyword{random},
   \keyword{configs}, and \keyword{variable}, the corresponding
   procedure will overwrite the current information with the
   information from the block.
@@ -481,7 +478,6 @@ set out [open "|gzip -c - > checkpoint.block.gz" "w"]
 blockfile $out write variable all
 blockfile $out write interactions
 blockfile $out write random
-blockfile $out write bitrandom
 blockfile $out write particles "id pos type q v f" all
 blockfile $out write bonds all
 blockfile $out write configs
@@ -932,9 +928,9 @@ The PDB/PSF files created by \es via the command \lit{writepsf} and
 configuration.
 
 Then you can use the VMD console to execute the command
-\begin{code}
+\begin{tclcode}
   imd connect \var{host} \var{port}
-\end{code}
+\end{tclcode}
 where \var{host} is the host running the simulation and \var{port} is
 the port it listens to. Note that VMD crashes, if you do that without
 loading a structure file before.  For more information on how to use

@@ -21,7 +21,6 @@ import espressomd._system as es
 import espressomd
 from espressomd import thermostat
 from espressomd import code_info
-from espressomd import analyze
 from espressomd import integrate
 from espressomd import visualization
 import numpy
@@ -56,7 +55,7 @@ lj_cap = 20
 # Integration parameters
 #############################################################
 system = espressomd.System()
-system.time_step = 0.01
+system.time_step = 0.001
 system.skin = 0.4
 #es._espressoHandle.Tcl_Eval('thermostat langevin 1.0 1.0')
 system.thermostat.set_langevin(kT=1.0, gamma=1.0)
@@ -68,7 +67,7 @@ warm_n_times = 30
 min_dist = 0.9
 
 # integration
-int_steps = 1000
+int_steps = 10
 int_n_times = 50000
 
 
@@ -98,17 +97,19 @@ n_part = int(volume * density)
 for i in range(n_part):
     system.part.add(id=i, pos=numpy.random.random(3) * system.box_l)
 
-analyze.distto(system, 0)
+system.analysis.distto(0)
 
 print("Simulate {} particles in a cubic simulation box {} at density {}."
       .format(n_part, box_l, density).strip())
 print("Interactions:\n")
-act_min_dist = analyze.mindist(system)
+act_min_dist = system.analysis.mindist()
 print("Start with minimal distance {}".format(act_min_dist))
 
 system.max_num_cells = 2744
 
-mayavi = visualization.mayavi_live(system)
+#Switch between openGl/Mayavi
+visualizer = visualization.mayaviLive(system)
+#visualizer = visualization.openGLLive(system)
 
 #############################################################
 #  Warmup Integration                                       #
@@ -134,14 +135,14 @@ i = 0
 while (i < warm_n_times and act_min_dist < min_dist):
     integrate.integrate(warm_steps)
     # Warmup criterion
-    act_min_dist = analyze.mindist(system)
+    act_min_dist = system.analysis.mindist()
 #  print("\rrun %d at time=%f (LJ cap=%f) min dist = %f\r" % (i,system.time,lj_cap,act_min_dist), end=' ')
     i += 1
 
 #   Increase LJ cap
     lj_cap = lj_cap + 10
     system.non_bonded_inter.set_force_cap(lj_cap)
-    mayavi.update()
+    visualizer.update()
 
 # Just to see what else we may get from the c code
 print("""
@@ -178,7 +179,7 @@ system.non_bonded_inter.set_force_cap(lj_cap)
 print(system.non_bonded_inter[0, 0].lennard_jones)
 
 # print initial energies
-energies = analyze.energy(system=system)
+energies = system.analysis.energy()
 print(energies)
 
 plot, = pyplot.plot([0],[energies['total']], label="total")
@@ -194,14 +195,14 @@ def main_loop():
     print("run %d at time=%f " % (i, system.time))
 
     integrate.integrate(int_steps)
-    mayavi.update()
+    visualizer.update()
 
-    energies = analyze.energy(system=system)
+    energies = system.analysis.energy()
     print(energies)
     plot.set_xdata(numpy.append(plot.get_xdata(), system.time))
     plot.set_ydata(numpy.append(plot.get_ydata(), energies['total']))
     obs_file.write('{ time %s } %s\n' % (system.time, energies))
-    linear_momentum = analyze.analyze_linear_momentum(system=system)
+    linear_momentum = system.analysis.analyze_linear_momentum()
     print(linear_momentum)
 
 def main_thread():
@@ -222,8 +223,8 @@ def update_plot():
 t = Thread(target=main_thread)
 t.daemon = True
 t.start()
-mayavi.register_callback(update_plot, interval=2000)
-mayavi.run_gui_event_loop()
+visualizer.registerCallback(update_plot, interval=2000)
+visualizer.start()
 
 # write end configuration
 end_file = open("pylj_liquid.end", "w")

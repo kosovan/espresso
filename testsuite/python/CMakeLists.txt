@@ -1,5 +1,6 @@
 set(py_tests  bondedInteractions.py
               cellsystem.py
+              coulomb_cloud_wall.py
               electrostaticInteractions.py
               engine_langevin.py
               engine_lb.py
@@ -8,6 +9,7 @@ set(py_tests  bondedInteractions.py
               nonBondedInteractions.py
               p3m_gpu.py
               particle.py
+	      tabulated.py
 )
 
 add_custom_target(python_tests
@@ -16,7 +18,6 @@ add_custom_target(python_tests
 foreach(testfile ${py_tests})
   get_filename_component(basename ${testfile} NAME_WE)
   add_test(${basename} ${CMAKE_BINARY_DIR}/pypresso ${testfile})
-  set_tests_properties(${basename} PROPERTIES SKIP_RETURN_CODE 42)
 endforeach(testfile ${py_tests})
 
 add_custom_target(check_python COMMAND ${CMAKE_CTEST_COMMAND})

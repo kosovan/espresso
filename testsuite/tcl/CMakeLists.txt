@@ -1,5 +1,6 @@
 set(tcl_tests  analysis.tcl
                angle.tcl
+               blockfile.tcl
                bonded_coulomb.tcl
                collision-detection-angular.tcl
                collision-detection-centers.tcl
@@ -88,6 +89,7 @@ set(tcl_tests  analysis.tcl
                rotate-system.tcl 
                rotate-system-dipoles.tcl 
                rotation.tcl 
+               rotational_inertia.tcl
                rotation_per_particle.tcl 
                scafacos-dipoles.tcl
                scafacos-dipoles-non-periodic.tcl
@@ -121,7 +123,6 @@ if(WITH_TCL)
     else()
       add_test(${basename} ${TEST_EXECUTABLE} ${testfile})
     endif()
-    set_tests_properties(${basename} PROPERTIES SKIP_RETURN_CODE 42)
   endforeach(testfile ${tcl_tests})
   add_custom_target(check_tcl COMMAND ${CMAKE_CTEST_COMMAND}
     DEPENDS Espresso tcl_tests)

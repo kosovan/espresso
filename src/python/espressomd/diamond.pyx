@@ -1,12 +1,11 @@
+from __future__ import print_function, absolute_import
 include "myconfig.pxi"
 cdef class Diamond:
     def __init__(self, *args, **kwargs):
         self._params = self.default_params()
         for k in self.required_keys():
             if k not in kwargs:
-                raise ValueError("At least the following keys have to be given as keyword arguments: " +
-                                 self.required_keys().__str__() + " got " + kwargs.__str__())
-                self._params[k] = kwargs[k]
+                raise ValueError("At least the following keys have to be given as keyword arguments: " +self.required_keys().__str__() + " got " + kwargs.__str__())
         for k in kwargs:
             if k in self.valid_keys():
                 self._params[k] = kwargs[k]
